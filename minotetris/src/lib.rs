@@ -12,7 +12,7 @@ pub struct PieceState {
     pub y: i32,
     pub r: u8
 }
-
+#[derive(Clone)]
 pub struct Board {
     pub grid: [[CellType; 40]; 10],
     pub current: Tetrimino,
@@ -36,15 +36,6 @@ impl Board {
         };
         board.set_piece(start_piece);
         board
-    }
-    pub fn clone(source: &Board) -> Board {
-        Board {
-            grid: source.grid,
-            current: source.current,
-            hold: source.hold.clone(),
-            state: source.state,
-            held: source.held
-        }
     }
     pub fn is_out_of_bounds(x: i32, y: i32) -> bool {
         x < 0 || x >= 10 || y < 0 || y >= 40
