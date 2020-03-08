@@ -1,8 +1,10 @@
+use enumset::EnumSetType;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum CellType {
-    EMPTY,
-    GARBAGE,
-    SOLID,
+    Empty,
+    Garbage,
+    Solid,
     J,
     L,
     S,
@@ -11,7 +13,8 @@ pub enum CellType {
     I,
     O
 }
-#[derive(PartialEq, Copy, Clone)]
+
+#[derive(EnumSetType)]
 pub enum Tetrimino {
     J,
     L,
@@ -21,6 +24,7 @@ pub enum Tetrimino {
     I,
     O
 }
+
 impl Tetrimino {
     pub fn offset_table(&self, rot: u8) -> &[(i32, i32)] {
         let rot = rot as usize;
@@ -54,6 +58,7 @@ impl Tetrimino {
         }
     }
 }
+
 const JLSTZ_OFFSET_TABLE: [[(i32, i32); 5]; 4] = [
     [
         (0, 0),
@@ -81,6 +86,7 @@ const JLSTZ_OFFSET_TABLE: [[(i32, i32); 5]; 4] = [
         (-1, 2)
     ]
 ];
+
 const O_OFFSET_TABLE: [[(i32, i32); 1]; 4] = [
     [
         (0, 0)
@@ -92,6 +98,7 @@ const O_OFFSET_TABLE: [[(i32, i32); 1]; 4] = [
         (-1, 0)
     ]
 ];
+
 const I_OFFSET_TABLE: [[(i32, i32); 5]; 4] = [
     [
         (0, 0),
@@ -119,6 +126,7 @@ const I_OFFSET_TABLE: [[(i32, i32); 5]; 4] = [
         (0, 2)
     ]
 ];
+
 const J_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -142,6 +150,7 @@ const J_STATES: [[(i32, i32); 4]; 4] = [
         (-1, 1)
     ]
 ];
+
 const L_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -165,6 +174,7 @@ const L_STATES: [[(i32, i32); 4]; 4] = [
         (-1, -1)
     ]
 ];
+
 const S_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -188,6 +198,7 @@ const S_STATES: [[(i32, i32); 4]; 4] = [
         (0, 0)
     ]
 ];
+
 const T_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -211,6 +222,7 @@ const T_STATES: [[(i32, i32); 4]; 4] = [
         (0, 1)
     ]
 ];
+
 const Z_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -234,6 +246,7 @@ const Z_STATES: [[(i32, i32); 4]; 4] = [
         (0, 0)
     ]
 ];
+
 const I_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),
@@ -257,6 +270,7 @@ const I_STATES: [[(i32, i32); 4]; 4] = [
         (0, -2)
     ]
 ];
+
 const O_STATES: [[(i32, i32); 4]; 4] = [
     [
         (0, 0),

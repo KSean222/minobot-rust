@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 minotetris = { path = "../minotetris" }
+ggez = "0.5.1"
+enumset = "0.4.0"
