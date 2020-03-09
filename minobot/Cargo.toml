@@ -1,5 +1,5 @@
 [package]
-name = "gui"
+name = "minobot"
 version = "0.1.0"
 authors = ["KSean222 <44050761+KSean222@users.noreply.github.com>"]
 edition = "2018"
@@ -8,8 +8,4 @@ edition = "2018"
 
 [dependencies]
 minotetris = { path = "../minotetris" }
-minobot = { path = "../minobot" }
-ggez = "0.5.1"
 enumset = "0.4.0"
-rand = "0.7.0"
-rand_pcg = "0.2.0"

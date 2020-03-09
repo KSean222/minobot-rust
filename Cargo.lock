@@ -811,6 +811,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gui"
+version = "0.1.0"
+dependencies = [
+ "enumset 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ggez 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "minobot 0.1.0",
+ "minotetris 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_pcg 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1077,11 +1089,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "minobot-rust"
+name = "minobot"
 version = "0.1.0"
 dependencies = [
  "enumset 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "ggez 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "minotetris 0.1.0",
 ]
 

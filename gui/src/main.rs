@@ -3,54 +3,39 @@ use ggez::event;
 use ggez::graphics::{ self, Image, Rect, DrawParam };
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::Context;
-use ggez::event::KeyCode;
 use enumset::EnumSet;
-use std::time::Duration;
 use std::boxed::Box;
 
 use minotetris::*;
 
 mod tetris;
-use tetris::{ Tetris, TetrisSettings };
+use tetris::{ Tetris, TetrisSettings, TetrisEvent };
 mod input;
 use input::*;
 
 pub struct MainState {
     res: Resources,
     tetris: Tetris,
-    controller: Box<dyn TetrisController>
+    controller: Box<dyn TetrisController>,
+    event_buffer: Vec<TetrisEvent>
 }
 
 impl MainState {
     fn new(ctx: &mut Context) -> ggez::GameResult<MainState> {
         let state = MainState {
             res: Resources::new(ctx),
-            tetris: Tetris::new(TetrisSettings {
-                ARR: Duration::from_millis(33),
-                DAS: Duration::from_millis(150),
-                SDD: Duration::from_millis(33)
-            }),
-            controller: Box::new(HumanController {
-                inputs: EnumSet::empty(),
-                hold: KeyCode::C,
-                left: KeyCode::Left,
-                right: KeyCode::Right,
-                rot_left: KeyCode::Z,
-                rot_right: KeyCode::Up,
-                hard_drop: KeyCode::Space,
-                soft_drop: KeyCode::Down
-            })
+            tetris: Tetris::new(TetrisSettings::default()),
+            controller: Box::new(BotController::new()),
+            event_buffer: vec![]
         };
         Ok(state)
     }
 }
 
-
-
 impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context) -> ggez::GameResult {
-        self.controller.update(ctx);
-        self.tetris.update(ggez::timer::delta(ctx), self.controller.inputs());
+        self.controller.update(ctx, &mut self.tetris, &self.event_buffer);
+        self.event_buffer = self.tetris.update(ggez::timer::delta(ctx), self.controller.inputs());
         Ok(())
     }
 
@@ -103,7 +88,7 @@ impl Resources {
 pub fn main() -> ggez::GameResult {
     let (mut ctx, mut event_loop) = ggez::ContextBuilder::new("minobot", "KSean222")
         .window_setup(ggez::conf::WindowSetup {
-            title: "Nothing to see here".to_owned(),
+            title: "MinoBot".to_owned(),
             samples: ggez::conf::NumSamples::Zero,
             vsync: true,
             icon: "".to_owned(),

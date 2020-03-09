@@ -1,16 +1,34 @@
 use crate::*;
+use std::hash::Hash;
 
- #[derive(Copy, Clone)]
+ #[derive(Copy, Clone, Debug)]
 pub struct HardDropResult {
     pub block_out: bool,
     pub lines_cleared: i32
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash, Debug)]
 pub struct PieceState {
     pub x: i32,
     pub y: i32,
     pub r: u8
+}
+
+impl PartialEq for PieceState {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x &&
+        self.y == other.y &&
+        self.r == other.r
+    }
+}
+
+impl Eq for PieceState { }
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum TspinType {
+    None,
+    Mini,
+    Full
 }
 
 pub trait Row: Copy {
@@ -44,6 +62,16 @@ impl Row for u16 {
 #[derive(Copy, Clone)]
 pub struct ColoredRow {
     row: [CellType; 10]
+}
+
+impl ColoredRow {
+    pub fn compress(&self) -> u16 {
+        let mut row = u16::EMPTY;
+        for x in 0..10 {
+            row.set(x, self.row[x as usize]);
+        }
+        row
+    }
 }
 
 impl Row for ColoredRow {
@@ -195,6 +223,22 @@ impl<T: Row> Board<T> {
             true
         } else {
             false
+        }
+    }
+}
+
+impl Board<ColoredRow> {
+    pub fn compress(&self) -> Board {
+        let mut rows = [0; 40];
+        for y in 0..40 {
+            rows[y] = self.rows[y].compress();
+        }
+        Board {
+            rows,
+            current: self.current,
+            hold: self.hold,
+            state: self.state,
+            held: self.held
         }
     }
 }
