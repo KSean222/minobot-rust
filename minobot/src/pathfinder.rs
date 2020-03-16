@@ -43,8 +43,7 @@ impl Pathfinder {
         queue.push_back(start_state);
         while let Some(parent_state) = queue.pop_front() {
             let parent = self.field[parent_state.x as usize][parent_state.y as usize][parent_state.r as usize].unwrap();
-            for mv in &MOVES {
-                let mv = *mv;
+            for &mv in &MOVES {
                 board.state = parent_state;
                 let success = match mv {
                     PathfinderMove::Left => board.move_left(),
@@ -116,20 +115,23 @@ impl Pathfinder {
         board.state = start_state;
         locks.values().map(|x| *x).collect()
     }
-    pub fn path_to(&self, x: i32, y: i32, r: u8) -> VecDeque<PathfinderMove> {
-        let mut node = self.field[x as usize][y as usize][r as usize].unwrap();
-        let mut moves = VecDeque::with_capacity(16);
-        let mut skipping = true;
-        while let Some(parent) = node.parent {
-            if node.mv != PathfinderMove::SonicDrop {
-                skipping = false;
+    pub fn path_to(&self, x: i32, y: i32, r: u8) -> Option<VecDeque<PathfinderMove>> {
+        if let Some(mut node) = self.field[x as usize][y as usize][r as usize] {
+            let mut moves = VecDeque::with_capacity(16);
+            let mut skipping = true;
+            while let Some(parent) = node.parent {
+                if node.mv != PathfinderMove::SonicDrop {
+                    skipping = false;
+                }
+                if !skipping {
+                    moves.push_front(node.mv);
+                }
+                node = self.field[parent.x as usize][parent.y as usize][parent.r as usize].unwrap();
             }
-            if !skipping {
-                moves.push_front(node.mv);
-            }
-            node = self.field[parent.x as usize][parent.y as usize][parent.r as usize].unwrap();
+            Some(moves)
+        } else {
+            None
         }
-        moves
     }
 }
 

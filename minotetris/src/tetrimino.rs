@@ -14,7 +14,7 @@ pub enum CellType {
     O
 }
 
-#[derive(EnumSetType)]
+#[derive(EnumSetType, Debug)]
 pub enum Tetrimino {
     J,
     L,

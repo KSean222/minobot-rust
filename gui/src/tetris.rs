@@ -14,7 +14,8 @@ pub struct Tetris {
     prev_inputs: EnumSet<TetrisInput>,
     settings: TetrisSettings,
     ghost_y: i32,
-    pub debug_ghost: PieceState
+    pub debug_ghost: PieceState,
+    pub debug_mino: Tetrimino
 }
 
 pub struct TetrisSettings {
@@ -49,7 +50,8 @@ impl Tetris {
             prev_inputs: EnumSet::empty(),
             settings,
             ghost_y: 0,
-            debug_ghost: PieceState { x: 0, y: 0, r: 0 }
+            debug_ghost: PieceState { x: 0, y: 0, r: 0 },
+            debug_mino: Tetrimino::O
         };
         tetris.update_ghost_y();
         tetris
@@ -170,7 +172,7 @@ impl Tetris {
             self.debug_ghost.x + 5,
             self.debug_ghost.y - 20,
             self.debug_ghost.r,
-            self.board.current,
+            self.debug_mino,
             true
         );
         if let Some(mino) = self.board.hold {
