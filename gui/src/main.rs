@@ -5,7 +5,6 @@ use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::Context;
 use enumset::EnumSet;
 use std::boxed::Box;
-
 use minotetris::*;
 
 mod tetris;
