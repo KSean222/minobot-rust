@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::time::Duration;
 use minobot::pathfinder::{ Pathfinder, PathfinderMove };
-use minobot::bot::Bot;
+use minobot::bot::{ Bot, BotSettings };
 use minobot::evaluator::StandardEvaluator;
 use std::sync::mpsc::{ self, Sender, Receiver, TryRecvError };
 use minotetris::*;
@@ -53,7 +53,7 @@ impl BotController {
         let (tx, bot_rx) = mpsc::channel();
         let (bot_tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let mut bot = Bot::new(StandardEvaluator::default());
+            let mut bot = Bot::new(StandardEvaluator::default(), BotSettings::default());
             let mut pathfinder = Pathfinder::new();
             let mut moves = 0;
             'handler: loop {

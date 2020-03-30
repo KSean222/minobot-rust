@@ -6,16 +6,30 @@ pub struct Bot<T=StandardEvaluator> {
     queue: Vec<Tetrimino>,
     pub root: Option<Node>,
     pathfinder: Pathfinder,
-    evaluator: T
+    evaluator: T,
+    pub settings: BotSettings
+}
+
+pub struct BotSettings {
+    pub use_hold: bool
+}
+
+impl Default for BotSettings {
+    fn default() -> Self {
+        BotSettings {
+            use_hold: false
+        }
+    }
 }
 
 impl<T: Evaluator> Bot<T> {
-    pub fn new(evaluator: T) -> Self {
+    pub fn new(evaluator: T, settings: BotSettings) -> Self {
         Bot {
             queue: Vec::new(),
             root: None,
             pathfinder: Pathfinder::new(),
-            evaluator
+            evaluator,
+            settings
         }
     }
     pub fn update(&mut self, mino: Tetrimino) {
@@ -31,17 +45,18 @@ impl<T: Evaluator> Bot<T> {
                 r: 0
             },
             score: 0.0,
-            sims: 1,
+            sims: 0,
+            uses_hold: false,
             finished: false,
             depth: 0
         });
         self.queue = queue;
     }
     pub fn think(&mut self) -> bool {
-        Self::update_child(self.root.as_mut().unwrap(), &mut self.pathfinder, &mut self.queue, &self.evaluator);
+        Self::update_child(&self.settings, self.root.as_mut().unwrap(), &mut self.pathfinder, &mut self.queue, &self.evaluator);
         self.root.as_ref().unwrap().finished
     }
-    fn update_child(parent: &mut Node, pathfinder: &mut Pathfinder, queue: &Vec<Tetrimino>, evaluator: &T) -> (f64, u32) {
+    fn update_child(settings: &BotSettings, parent: &mut Node, pathfinder: &mut Pathfinder, queue: &Vec<Tetrimino>, evaluator: &T) -> (f64, u32) {
         let mut child = None;
         let mut score = std::f64::NEG_INFINITY;
         for c in parent.children.iter_mut() {
@@ -57,34 +72,56 @@ impl<T: Evaluator> Bot<T> {
             }
         }
         if let Some(child) = child {
-            let eval = Self::update_child(child, pathfinder, queue, evaluator);
+            let eval = Self::update_child(settings, child, pathfinder, queue, evaluator);
             parent.score += eval.0;
             parent.sims += eval.1;
             eval
         } else if parent.children.is_empty() {
-            let mut score = 0.0;
-            let moves = pathfinder.get_moves(&mut parent.board);
-            for mv in moves {
+            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &Vec<Tetrimino>, child_depth: u32, score: &mut f64, evaluator: &T, uses_hold: bool) {
                 let mut board = parent.board.clone();
                 board.state = mv;
-                let mv_res = board.hard_drop(queue[parent.depth as usize]);
-                if mv_res.block_out {
-                    continue;
+                let mut child_depth = child_depth;
+                if uses_hold {
+                    board.hold_piece(queue[child_depth as usize]);
+                    child_depth += 1;
                 }
-                let mut child = Node {
-                    board,
-                    mv,
-                    children: Vec::new(),
-                    depth: parent.depth + 1,
-                    score: 0.0,
-                    sims: 0,
-                    finished: (parent.depth + 1) as usize >= queue.len()
-                };
-                let (accumulated, transient) = evaluator.evaluate(&child, parent);
-                child.score = accumulated + transient;
-                child.sims = 1;
-                score += accumulated;
-                parent.children.push(child);
+                let mv_res = board.hard_drop(queue[child_depth as usize]);
+                child_depth += 1;
+                if !mv_res.block_out {
+                    let mut child = Node {
+                        board,
+                        mv,
+                        children: Vec::new(),
+                        depth: child_depth,
+                        score: 0.0,
+                        sims: 0,
+                        uses_hold,
+                        finished: child_depth as usize >= queue.len()
+                    };
+                    let (accumulated, transient) = evaluator.evaluate(&child, parent);
+                    child.score = accumulated + transient;
+                    child.sims = 1;
+                    *score += accumulated;
+                    parent.children.push(child);
+                }
+            }
+            let mut score = 0.0;
+            let mut child_depth = parent.depth;
+            for mv in pathfinder.get_moves(&mut parent.board) {
+                create_child(mv, parent, queue, child_depth, &mut score, evaluator, false);
+            }
+            if settings.use_hold {
+                let mut hold_board = parent.board.clone();
+                let used = hold_board.hold.is_none();
+                hold_board.hold_piece(queue[child_depth as usize]);
+                if used {
+                    child_depth += 1;
+                }
+                if ((child_depth - 1) as usize) < queue.len() {
+                    for mv in pathfinder.get_moves(&mut hold_board) {
+                        create_child(mv, parent, queue, child_depth, &mut score, evaluator, true);
+                    }
+                }
             }
             let sims = parent.children.len() as u32;
             if sims == 0 {
@@ -121,6 +158,7 @@ impl<T: Evaluator> Bot<T> {
 pub struct Node {
     pub board: Board,
     pub mv: PieceState,
+    pub uses_hold: bool,
 
     pub children: Vec<Node>,
     pub score: f64,
