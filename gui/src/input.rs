@@ -91,7 +91,9 @@ pub struct BotController {
     tx: Sender<BotCommand>,
     rx: Receiver<BotCommand>,
     inputs: EnumSet<TetrisInput>,
-    send_inputs: bool
+    send_inputs: bool,
+    thinking_time: Duration,
+    timed_out: bool
 }
 
 #[derive(Debug)]
@@ -102,14 +104,20 @@ enum BotCommand {
     Think,
     NextMove,
     //rx
-    Move(VecDeque<PathfinderMove>, PieceState)
+    Move(VecDeque<PathfinderMove>, MoveDiagnostics)
+}
+
+#[derive(Debug)]
+struct MoveDiagnostics {
+    thinks: u32,
+    mv: PieceState
 }
 
 #[derive(Debug)]
 enum BotControllerState {
     Update,
     Reset,
-    Thinking(Duration),
+    Thinking,
     Move(PathfinderMove),
     HardDrop,
     Hold
@@ -133,9 +141,13 @@ impl BotController {
                         },
                         BotCommand::Think => {
                             let mut done = false;
+                            let mut thinks = 0;
                             loop {
-                                if !done {
+                                if done {
+                                    break;
+                                } else {
                                     done = bot.think();
+                                    thinks += 1;
                                 }
                                 match bot_rx.try_recv() {
                                     Ok(command) => {
@@ -153,8 +165,6 @@ impl BotController {
                             }
                             let mut board = bot.root.as_ref().unwrap().board.clone();
                             let root = bot.root.as_ref().unwrap();
-                            println!("score: {}", root.score);
-                            println!("sims: {}", root.sims);
                             let mut mv = PieceState {
                                 x: 0,
                                 y: 0,
@@ -171,7 +181,11 @@ impl BotController {
                             } else {
                                 VecDeque::with_capacity(0)
                             };
-                            if let Err(_) = bot_tx.send(BotCommand::Move(path, mv)) {
+                            let diagnostics = MoveDiagnostics {
+                                thinks,
+                                mv
+                            };
+                            if let Err(_) = bot_tx.send(BotCommand::Move(path, diagnostics)) {
                                 break 'handler;
                             }
                         },
@@ -189,7 +203,9 @@ impl BotController {
             tx,
             rx,
             inputs: EnumSet::empty(),
-            send_inputs: false
+            send_inputs: false,
+            thinking_time: DURATION_ZERO,
+            timed_out: false
         }
     }
     fn update_state_from_queue(&mut self) {
@@ -246,26 +262,29 @@ impl TetrisController for BotController {
                 }
                 self.tx.send(BotCommand::Reset(tetris.board.compress(), pieces)).unwrap();
                 self.tx.send(BotCommand::Think).unwrap();
-                self.state = BotControllerState::Thinking(DURATION_ZERO);
+                self.state = BotControllerState::Thinking;
             },
             BotControllerState::Update => {
                 self.tx.send(BotCommand::Update(tetris.queue.get(tetris.queue.max_previews() - 1))).unwrap();
                 self.tx.send(BotCommand::Think).unwrap();
-                self.state = BotControllerState::Thinking(DURATION_ZERO);
+                self.state = BotControllerState::Thinking;
             }
-            BotControllerState::Thinking(duration) => {
-                //TODO de-hackify
-                self.state = BotControllerState::Thinking(duration + ggez::timer::delta(ctx));
+            BotControllerState::Thinking => {
+                if !self.timed_out {
+                    self.thinking_time += ggez::timer::delta(ctx);
+                }
                 if let Ok(command) = self.rx.try_recv() {
-                    if let BotCommand::Move(path, mv) = command {
+                    if let BotCommand::Move(path, diagnostics) = command {
+                        println!("ms/think: {}", 100.0 / (diagnostics.thinks as f64));
+                        self.thinking_time = DURATION_ZERO;
+                        self.timed_out = false;
                         self.queue = path;
-                        tetris.debug_ghost = mv;
-                        tetris.debug_mino = tetris.board.current;
                         self.update_state_from_queue();
                     }
-                } else if duration > Duration::from_millis(250) {
-                    self.state = BotControllerState::Thinking(DURATION_ZERO);
+                } else if self.thinking_time.as_millis() >= 100 {
                     self.tx.send(BotCommand::NextMove).unwrap();
+                    self.timed_out = true;
+                    self.thinking_time = DURATION_ZERO;
                 }
             }
         }

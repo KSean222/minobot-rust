@@ -102,7 +102,7 @@ pub struct Board<T=u16> {
 
 impl std::fmt::Debug for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", "<Board>")
+        write!(f, "{}", "Board {  }")
     }
 }
 

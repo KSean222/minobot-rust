@@ -49,11 +49,11 @@ impl<T: Evaluator> Bot<T> {
                 continue;
             }
             use std::f64::consts::SQRT_2;
-            let s = (if c.sims == 0 { 0.0 } else { c.score / (c.sims as f64) }) +
+            let child_score = (if c.sims == 0 { 0.0 } else { c.score / (c.sims as f64) }) +
                 1.0 * SQRT_2 * ((parent.sims as f64).ln() / (c.sims as f64)).sqrt();
-            if score > s {
+            if child_score > score {
                 child = Some(c);
-                score = s;
+                score = child_score;
             }
         }
         if let Some(child) = child {
@@ -63,12 +63,14 @@ impl<T: Evaluator> Bot<T> {
             eval
         } else if parent.children.is_empty() {
             let mut score = 0.0;
-            let mut sims = 0u32;
             let moves = pathfinder.get_moves(&mut parent.board);
             for mv in moves {
                 let mut board = parent.board.clone();
                 board.state = mv;
-                board.hard_drop(queue[parent.depth as usize]);
+                let mv_res = board.hard_drop(queue[parent.depth as usize]);
+                if mv_res.block_out {
+                    continue;
+                }
                 let mut child = Node {
                     board,
                     mv,
@@ -82,9 +84,9 @@ impl<T: Evaluator> Bot<T> {
                 child.score = accumulated + transient;
                 child.sims = 1;
                 score += accumulated;
-                sims += 1;
                 parent.children.push(child);
             }
+            let sims = parent.children.len() as u32;
             if sims == 0 {
                 parent.finished = true;
             } else {
@@ -100,9 +102,7 @@ impl<T: Evaluator> Bot<T> {
     pub fn next_move(&mut self) -> Option<&Node> {
         self.queue.remove(0);
         let root = self.root.take().unwrap();
-        self.root = root.children.into_iter().max_by(|x, y| {
-            x.score.partial_cmp(&y.score).unwrap()
-        });
+        self.root = root.children.into_iter().max_by_key(|c| c.sims);
         if self.root.is_some() {
             Self::update_tree(self.root.as_mut().unwrap());
         }
@@ -117,6 +117,7 @@ impl<T: Evaluator> Bot<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct Node {
     pub board: Board,
     pub mv: PieceState,
