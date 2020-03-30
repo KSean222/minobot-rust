@@ -34,7 +34,8 @@ enum BotCommand {
 #[derive(Debug)]
 struct MoveDiagnostics {
     thinks: u32,
-    mv: PieceState
+    mv: PieceState,
+    moves: u32
 }
 
 #[derive(Debug)]
@@ -54,6 +55,7 @@ impl BotController {
         std::thread::spawn(move || {
             let mut bot = Bot::new(StandardEvaluator::default());
             let mut pathfinder = Pathfinder::new();
+            let mut moves = 0;
             'handler: loop {
                 if let Ok(command) = bot_rx.recv() {
                     match command {
@@ -105,9 +107,11 @@ impl BotController {
                             } else {
                                 VecDeque::with_capacity(0)
                             };
+                            moves += 1;
                             let diagnostics = MoveDiagnostics {
                                 thinks,
-                                mv
+                                mv,
+                                moves
                             };
                             if let Err(_) = bot_tx.send(BotCommand::Move(path, diagnostics)) {
                                 break 'handler;
@@ -199,7 +203,9 @@ impl TetrisController for BotController {
                 }
                 if let Ok(command) = self.rx.try_recv() {
                     if let BotCommand::Move(path, diagnostics) = command {
+                        println!("Move {}", diagnostics.moves);
                         println!("ms/think: {}", 100.0 / (diagnostics.thinks as f64));
+                        println!("{}", "");
                         self.thinking_time = DURATION_ZERO;
                         self.timed_out = false;
                         self.queue = path;
