@@ -20,7 +20,8 @@ pub struct StandardEvaluator {
     wells: f64,
     wells_sq: f64,
     spikes: f64,
-    spikes_sq: f64
+    spikes_sq: f64,
+    line_clear: [f64; 5]
 }
 
 impl Default for  StandardEvaluator {
@@ -39,7 +40,14 @@ impl Default for  StandardEvaluator {
             wells: 0.0,
             wells_sq: -1.0,
             spikes: 0.0,
-            spikes_sq: -1.0
+            spikes_sq: -1.0,
+            line_clear: [
+                0.0,
+                -50.0,
+                -40.0,
+                -25.0,
+                500.0
+            ]
         }
     }
 }
@@ -101,6 +109,7 @@ impl Evaluator for StandardEvaluator {
             accumulated += (move_height as f64) * self.move_height;
             accumulated += ((move_height * move_height) as f64) * self.move_height_sq;
         }
+        accumulated += self.line_clear[node.lock.lines_cleared as usize];
         accumulated += (holes as f64) * self.holes;
         accumulated += ((holes * holes) as f64) * self.holes_sq;
         accumulated += (hole_depths as f64) * self.hole_depths;

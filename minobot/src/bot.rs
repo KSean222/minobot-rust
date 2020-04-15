@@ -44,6 +44,10 @@ impl<T: Evaluator> Bot<T> {
                 y: 0,
                 r: 0
             },
+            lock: HardDropResult {
+                lines_cleared: 0,
+                block_out: false
+            },
             score: 0.0,
             sims: 0,
             uses_hold: false,
@@ -85,12 +89,13 @@ impl<T: Evaluator> Bot<T> {
                     board.hold_piece(queue[child_depth as usize]);
                     child_depth += 1;
                 }
-                let mv_res = board.hard_drop(queue[child_depth as usize]);
+                let lock = board.hard_drop(queue[child_depth as usize]);
                 child_depth += 1;
-                if !mv_res.block_out {
+                if !lock.block_out {
                     let mut child = Node {
                         board,
                         mv,
+                        lock,
                         children: Vec::new(),
                         depth: child_depth,
                         score: 0.0,
@@ -158,6 +163,7 @@ impl<T: Evaluator> Bot<T> {
 pub struct Node {
     pub board: Board,
     pub mv: PieceState,
+    pub lock: HardDropResult,
     pub uses_hold: bool,
 
     pub children: Vec<Node>,
