@@ -81,7 +81,7 @@ impl<T: Evaluator> Bot<T> {
             parent.sims += eval.1;
             eval
         } else if parent.children.is_empty() {
-            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &[Tetrimino], child_depth: u32, score: &mut f64, evaluator: &T, uses_hold: bool) {
+            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &[Tetrimino], child_depth: u32, evaluator: &T, uses_hold: bool) -> f64 {
                 let mut board = parent.board.clone();
                 board.state = mv;
                 let mut child_depth = child_depth;
@@ -106,14 +106,16 @@ impl<T: Evaluator> Bot<T> {
                     let (accumulated, transient) = evaluator.evaluate(&child, parent);
                     child.score = accumulated + transient;
                     child.sims = 1;
-                    *score += accumulated;
                     parent.children.push(child);
+                    accumulated
+                } else {
+                    0.0
                 }
             }
             let mut score = 0.0;
             let mut child_depth = parent.depth;
             for mv in pathfinder.get_moves(&mut parent.board) {
-                create_child(mv, parent, queue, child_depth, &mut score, evaluator, false);
+                score += create_child(mv, parent, queue, child_depth, evaluator, false);
             }
             if settings.use_hold {
                 let mut hold_board = parent.board.clone();
@@ -124,7 +126,7 @@ impl<T: Evaluator> Bot<T> {
                 }
                 if ((child_depth - 1) as usize) < queue.len() {
                     for mv in pathfinder.get_moves(&mut hold_board) {
-                        create_child(mv, parent, queue, child_depth, &mut score, evaluator, true);
+                        score += create_child(mv, parent, queue, child_depth, evaluator, true);
                     }
                 }
             }
