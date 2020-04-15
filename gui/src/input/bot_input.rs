@@ -113,7 +113,7 @@ impl BotController {
                                 mv,
                                 moves
                             };
-                            if let Err(_) = bot_tx.send(BotCommand::Move(path, diagnostics)) {
+                            if bot_tx.send(BotCommand::Move(path, diagnostics)).is_err() {
                                 break 'handler;
                             }
                         },
@@ -146,7 +146,7 @@ impl BotController {
 }
 
 impl TetrisController for BotController {
-    fn update(&mut self, ctx: &Context, tetris: &mut Tetris, events: &Vec<TetrisEvent>) {
+    fn update(&mut self, ctx: &Context, tetris: &mut Tetris, events: &[TetrisEvent]) {
         match self.state {
             BotControllerState::Move(mv) => {
                 let mut finished = false;
@@ -205,7 +205,7 @@ impl TetrisController for BotController {
                     if let BotCommand::Move(path, diagnostics) = command {
                         println!("Move {}", diagnostics.moves);
                         println!("ms/think: {}", 100.0 / (diagnostics.thinks as f64));
-                        println!("{}", "");
+                        println!();
                         self.thinking_time = DURATION_ZERO;
                         self.timed_out = false;
                         self.queue = path;

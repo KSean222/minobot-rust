@@ -30,7 +30,7 @@ impl Default for HumanController {
 }
 
 impl TetrisController for HumanController {
-    fn update(&mut self, ctx: &Context, _tetris: &mut Tetris, _events: &Vec<TetrisEvent>) {
+    fn update(&mut self, ctx: &Context, _tetris: &mut Tetris, _events: &[TetrisEvent]) {
         self.inputs.clear();
         if keyboard::is_key_pressed(ctx, self.hold) {
             self.inputs.insert(TetrisInput::Hold);

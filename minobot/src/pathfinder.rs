@@ -28,6 +28,12 @@ pub struct Pathfinder {
     field: [[[Option<MoveNode>; 4]; 40]; 10]
 }
 
+impl Default for Pathfinder {
+    fn default() -> Self {
+        Pathfinder::new()
+    }
+}
+
 impl Pathfinder {
     pub fn new() -> Self {
         Pathfinder {
@@ -124,7 +130,7 @@ impl Pathfinder {
             }
         }
         board.state = start_state;
-        locks.values().map(|x| *x).collect()
+        locks.values().copied().collect()
     }
     pub fn path_to(&self, x: i32, y: i32, r: u8) -> Option<VecDeque<PathfinderMove>> {
         if let Some(mut node) = self.field[x as usize][y as usize][r as usize] {

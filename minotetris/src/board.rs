@@ -7,22 +7,12 @@ pub struct HardDropResult {
     pub lines_cleared: i32
 }
 
-#[derive(Copy, Clone, Hash, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct PieceState {
     pub x: i32,
     pub y: i32,
     pub r: u8
 }
-
-impl PartialEq for PieceState {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x &&
-        self.y == other.y &&
-        self.r == other.r
-    }
-}
-
-impl Eq for PieceState { }
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TspinType {
@@ -102,7 +92,7 @@ pub struct Board<T=u16> {
 
 impl std::fmt::Debug for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", "Board {  }")
+        write!(f, "Board {{  }}")
     }
 }
 
@@ -171,7 +161,7 @@ impl<T: Row> Board<T> {
         self.held = false;
         HardDropResult {
             block_out: !self.piece_fits(self.state.x, self.state.y, self.state.r),
-            lines_cleared: lines_cleared
+            lines_cleared
         }
     }
     pub fn set_piece(&mut self, piece: Tetrimino){
@@ -236,8 +226,8 @@ impl<T: Row> Board<T> {
 impl Board<ColoredRow> {
     pub fn compress(&self) -> Board {
         let mut rows = [0; 40];
-        for y in 0..40 {
-            rows[y] = self.rows[y].compress();
+        for (y, row) in self.rows.iter().enumerate() {
+            rows[y] = row.compress();
         }
         Board {
             rows,

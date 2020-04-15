@@ -19,6 +19,6 @@ pub enum TetrisInput {
 }
 
 pub trait TetrisController {
-    fn update(&mut self, ctx: &Context, tetris: &mut Tetris, events: &Vec<TetrisEvent>);
+    fn update(&mut self, ctx: &Context, tetris: &mut Tetris, events: &[TetrisEvent]);
     fn inputs(&mut self) -> EnumSet<TetrisInput>;
 }

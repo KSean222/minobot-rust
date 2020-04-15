@@ -53,10 +53,10 @@ impl<T: Evaluator> Bot<T> {
         self.queue = queue;
     }
     pub fn think(&mut self) -> bool {
-        Self::update_child(&self.settings, self.root.as_mut().unwrap(), &mut self.pathfinder, &mut self.queue, &self.evaluator);
+        Self::update_child(&self.settings, self.root.as_mut().unwrap(), &mut self.pathfinder, &self.queue, &self.evaluator);
         self.root.as_ref().unwrap().finished
     }
-    fn update_child(settings: &BotSettings, parent: &mut Node, pathfinder: &mut Pathfinder, queue: &Vec<Tetrimino>, evaluator: &T) -> (f64, u32) {
+    fn update_child(settings: &BotSettings, parent: &mut Node, pathfinder: &mut Pathfinder, queue: &[Tetrimino], evaluator: &T) -> (f64, u32) {
         let mut child = None;
         let mut score = std::f64::NEG_INFINITY;
         for c in parent.children.iter_mut() {
@@ -77,7 +77,7 @@ impl<T: Evaluator> Bot<T> {
             parent.sims += eval.1;
             eval
         } else if parent.children.is_empty() {
-            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &Vec<Tetrimino>, child_depth: u32, score: &mut f64, evaluator: &T, uses_hold: bool) {
+            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &[Tetrimino], child_depth: u32, score: &mut f64, evaluator: &T, uses_hold: bool) {
                 let mut board = parent.board.clone();
                 board.state = mv;
                 let mut child_depth = child_depth;
