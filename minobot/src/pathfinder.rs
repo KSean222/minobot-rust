@@ -18,6 +18,12 @@ const MOVES: [PathfinderMove; 5] = [
     PathfinderMove::SonicDrop
 ];
 
+const O_MOVES: [PathfinderMove; 3] = [
+    PathfinderMove::Left,
+    PathfinderMove::Right,
+    PathfinderMove::SonicDrop
+];
+
 pub struct Pathfinder {
     field: [[[Option<MoveNode>; 4]; 40]; 10]
 }
@@ -43,7 +49,12 @@ impl Pathfinder {
         queue.push_back(start_state);
         while let Some(parent_state) = queue.pop_front() {
             let parent = self.field[parent_state.x as usize][parent_state.y as usize][parent_state.r as usize].unwrap();
-            for &mv in &MOVES {
+            let moves = if board.current == Tetrimino::O {
+                O_MOVES.iter()
+            } else {
+                MOVES.iter()
+            };
+            for &mv in moves {
                 board.state = parent_state;
                 let success = match mv {
                     PathfinderMove::Left => board.move_left(),
