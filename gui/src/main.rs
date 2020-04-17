@@ -25,7 +25,7 @@ impl MainState {
             res: Resources::new(ctx),
             tetris: Tetris::new(TetrisSettings::default()),
             controller: Box::new(BotController::new()),
-            event_buffer: vec![]
+            event_buffer: Vec::new()
         };
         Ok(state)
     }
