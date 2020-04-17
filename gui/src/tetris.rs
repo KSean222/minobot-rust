@@ -62,13 +62,19 @@ impl Tetris {
         self.ghost_y = self.board.state.y;
         self.board.state.y = orig_y;
     }
+    fn take_mino(&mut self, events: &mut Vec<TetrisEvent>) -> Tetrimino {
+        let mino = self.queue.take();
+        events.push(TetrisEvent::PieceQueued(self.queue.get(self.queue.max_previews() - 1)));
+        mino
+    }
     pub fn update(&mut self, delta: Duration, inputs: EnumSet<TetrisInput>) -> Vec<TetrisEvent> {
-        let mut events = vec![];
+        let mut events = Vec::new();
         let orig_state = self.board.state;
         let mut update_ghost = false;
         if inputs.contains(TetrisInput::Hold) {
             if self.board.hold.is_none() {
-                self.board.hold_piece(self.queue.take());
+                let mino = self.take_mino(&mut events);
+                self.board.hold_piece(mino);
                 events.push(TetrisEvent::PieceHeld);
                 update_ghost = true;
             } else if self.board.hold_piece(self.queue.get(0)) {
@@ -127,7 +133,8 @@ impl Tetris {
             self.sdd_timer += delta;
         }
         if inputs.contains(TetrisInput::HardDrop) && !self.prev_inputs.contains(TetrisInput::HardDrop) {
-            let result = self.board.hard_drop(self.queue.take());
+            let mino = self.take_mino(&mut events);
+            let result = self.board.hard_drop(mino);
             events.push(TetrisEvent::PieceLocked(result));
             update_ghost = true;
         }
@@ -204,5 +211,6 @@ pub enum TetrisEvent {
     PieceMove(PieceState),
     StackTouched,
     PieceLocked(HardDropResult),
-    PieceHeld
+    PieceHeld,
+    PieceQueued(Tetrimino)
 }

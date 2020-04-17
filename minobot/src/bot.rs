@@ -3,7 +3,7 @@ use crate::evaluator::{ Evaluator, StandardEvaluator };
 use minotetris::*;
 
 pub struct Bot<T=StandardEvaluator> {
-    queue: Vec<Tetrimino>,
+    pub queue: Vec<Tetrimino>,
     pub root: Option<Node>,
     pathfinder: Pathfinder,
     evaluator: T,
@@ -32,7 +32,7 @@ impl<T: Evaluator> Bot<T> {
             settings
         }
     }
-    pub fn update(&mut self, mino: Tetrimino) {
+    pub fn update_queue(&mut self, mino: Tetrimino) {
         self.queue.push(mino);
     }
     pub fn reset(&mut self, board: Board, queue: Vec<Tetrimino>) {
@@ -86,8 +86,11 @@ impl<T: Evaluator> Bot<T> {
                 board.state = mv;
                 let mut child_depth = child_depth;
                 if uses_hold {
+                    let used = board.hold.is_none();
                     board.hold_piece(queue[child_depth as usize]);
-                    child_depth += 1;
+                    if used {
+                        child_depth += 1;
+                    }
                 }
                 let lock = board.hard_drop(queue[child_depth as usize]);
                 child_depth += 1;
@@ -113,18 +116,15 @@ impl<T: Evaluator> Bot<T> {
                 }
             }
             let mut score = 0.0;
-            let mut child_depth = parent.depth;
+            let child_depth = parent.depth;
             for mv in pathfinder.get_moves(&mut parent.board) {
                 score += create_child(mv, parent, queue, child_depth, evaluator, false);
             }
             if settings.use_hold {
                 let mut hold_board = parent.board.clone();
-                let used = hold_board.hold.is_none();
+                let used = if hold_board.hold.is_none() { 1 } else { 0 };
                 hold_board.hold_piece(queue[child_depth as usize]);
-                if used {
-                    child_depth += 1;
-                }
-                if ((child_depth - 1) as usize) < queue.len() {
+                if ((child_depth + used) as usize) < queue.len() {
                     for mv in pathfinder.get_moves(&mut hold_board) {
                         score += create_child(mv, parent, queue, child_depth, evaluator, true);
                     }
@@ -150,6 +150,18 @@ impl<T: Evaluator> Bot<T> {
         if self.root.is_some() {
             Self::update_tree(self.root.as_mut().unwrap());
         }
+        // let board = &self.root.as_ref().unwrap().board;
+        // for y in 20..40 {
+        //     for x in 0..10 {
+        //         print!("{}", if board.get_cell(x, y) == CellType::Empty {
+        //             ".."
+        //         } else {
+        //             "[]"
+        //         });
+        //     }
+        //     println!("{}", "");
+        // }
+        // println!("Hold: {:?}", board.hold);
         self.root.as_ref()
     }
     fn update_tree(node: &mut Node){
