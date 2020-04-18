@@ -1,3 +1,5 @@
+use serde::{ Serialize, Deserialize };
+
 use crate::pathfinder::Pathfinder;
 use crate::evaluator::{ Evaluator, StandardEvaluator };
 use minotetris::*;
@@ -146,6 +148,7 @@ impl<T: Evaluator> Bot<T> {
     pub fn next_move(&mut self) -> Option<&Node> {
         self.queue.remove(0);
         let root = self.root.take().unwrap();
+        //println!("{}", serde_json::to_string(&root).unwrap());
         self.root = root.children.into_iter().max_by_key(|c| c.sims);
         if self.root.is_some() {
             Self::update_tree(self.root.as_mut().unwrap());
@@ -173,7 +176,7 @@ impl<T: Evaluator> Bot<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
     pub board: Board,
     pub mv: PieceState,

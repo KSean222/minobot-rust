@@ -1,6 +1,7 @@
 use enumset::EnumSetType;
+use serde::{ Serialize, Deserialize };
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum CellType {
     Empty,
     Garbage,
@@ -14,7 +15,7 @@ pub enum CellType {
     O
 }
 
-#[derive(EnumSetType, Debug)]
+#[derive(EnumSetType, Debug, Serialize, Deserialize)]
 pub enum Tetrimino {
     J,
     L,

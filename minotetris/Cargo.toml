@@ -11,3 +11,5 @@ rand = "0.7.0"
 rand_pcg = "0.2.0"
 enumset = "0.4.0"
 arrayvec = "0.4.11"
+serde = { version = "1.0", features = ["derive"] }
+serde-big-array = "0.2.0"

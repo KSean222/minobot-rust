@@ -1,13 +1,14 @@
 use crate::*;
-use std::hash::Hash;
+use serde::{ Serialize, Deserialize };
+use serde::de::DeserializeOwned;
 
- #[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct HardDropResult {
     pub block_out: bool,
     pub lines_cleared: i32
 }
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct PieceState {
     pub x: i32,
     pub y: i32,
@@ -21,11 +22,10 @@ pub enum TspinType {
     Full
 }
 
-pub trait Row: Copy {
+pub trait Row: Copy + Default + Serialize + DeserializeOwned {
     fn set(&mut self, x: i32, cell: CellType);
     fn get(&self, x: i32) -> CellType;
     fn filled(&self) -> bool;
-    const EMPTY: Self;
 }
 
 impl Row for u16 {
@@ -46,17 +46,16 @@ impl Row for u16 {
     fn filled(&self) -> bool {
         *self == 0b0000001111111111
     }
-    const EMPTY: u16 = 0;
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct ColoredRow {
     row: [CellType; 10]
 }
 
 impl ColoredRow {
     pub fn compress(&self) -> u16 {
-        let mut row = u16::EMPTY;
+        let mut row = u16::default();
         for x in 0..10 {
             row.set(x, self.row[x as usize]);
         }
@@ -76,13 +75,21 @@ impl Row for ColoredRow {
             .iter()
             .all(|c| *c != CellType::Empty)
     }
-    const EMPTY: ColoredRow = ColoredRow {
-        row: [CellType::Empty; 10]
-    };
 }
 
-#[derive(Clone)]
-pub struct Board<T=u16> {
+impl Default for ColoredRow {
+    fn default() -> Self {
+        ColoredRow {
+            row: [CellType::Empty; 10]
+        }
+    }
+}
+
+big_array! { BigArray; }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Board<T=u16> where T: Row {
+    #[serde(with = "BigArray")]
     pub rows: [T; 40],
     pub current: Tetrimino,
     pub hold: Option<Tetrimino>,
@@ -99,7 +106,7 @@ impl std::fmt::Debug for Board {
 impl<T: Row> Board<T> {
     pub fn new(start_piece: Tetrimino) -> Self {
         let mut board = Board {
-            rows: [T::EMPTY; 40],
+            rows: [T::default(); 40],
             current: start_piece,
             hold: None,
             state: PieceState {
@@ -146,7 +153,7 @@ impl<T: Row> Board<T> {
         for (cell_x, cell_y) in &self.current.cells(self.state.r) {
             self.set_cell(self.state.x + cell_x, self.state.y + cell_y, self.current.cell());
         }
-        let mut new_board = [T::EMPTY; 40];
+        let mut new_board = [T::default(); 40];
         let mut lines_cleared: i32 = 0;
         for y in (0..40).rev() {
             if self.rows[y].filled() {

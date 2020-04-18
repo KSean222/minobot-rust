@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate serde_big_array;
+
 mod tetrimino;
 mod board;
 mod queue;
