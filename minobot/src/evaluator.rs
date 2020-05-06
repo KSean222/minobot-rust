@@ -1,5 +1,4 @@
 use crate::bot::Node;
-use std::collections::HashSet;
 use minotetris::*;
 
 pub trait Evaluator {
@@ -13,8 +12,10 @@ pub struct StandardEvaluator {
     hole_depths_sq: f64,
     move_height: f64,
     move_height_sq: f64,
-    piece_fit: f64,
-    piece_fit_sq: f64,
+    filled_cells_x: f64,
+    filled_cells_x_sq: f64,
+    filled_cells_down: f64,
+    filled_cells_down_sq: f64,
     max_height: f64,
     max_height_sq: f64,
     wells: f64,
@@ -33,9 +34,11 @@ impl Default for  StandardEvaluator {
             hole_depths_sq: -0.5,
             move_height: 0.0,
             move_height_sq: -1.0,
-            piece_fit: 0.0,
-            piece_fit_sq: 0.0,
-            max_height: -1.0,
+            filled_cells_x: 0.0,
+            filled_cells_x_sq: 10.0,
+            filled_cells_down: 0.0,
+            filled_cells_down_sq: 10.0,
+            max_height: -10.0,
             max_height_sq: 0.0,
             wells: 0.0,
             wells_sq: -1.0,
@@ -93,17 +96,25 @@ impl Evaluator for StandardEvaluator {
                 }
             }
         }
-        let mut to_check = HashSet::new();
+        let mut filled_cells_x = 0;
+        let mut filled_cells_down = 0;
         for &(x, y) in &parent.board.current.cells(node.mv.r) {
-            to_check.insert((node.mv.x + x, node.mv.y + y));
-        }
-        let mut filled_edge_tiles = 0;
-        let total_edge_tiles = to_check.len();
-        for (x, y) in to_check {
-            if parent.board.get_cell(x, y) != CellType::Empty {
-                filled_edge_tiles += 1;
+            let cell_x = node.mv.x + x;
+            let cell_y = node.mv.y + y;
+            if parent.board.get_cell(cell_x + 1, cell_y) != CellType::Empty {
+                filled_cells_x += 1;
+            }
+            if parent.board.get_cell(cell_x - 1, cell_y) != CellType::Empty {
+                filled_cells_x += 1;
+            }
+            if parent.board.get_cell(cell_x, cell_y + 1) != CellType::Empty {
+                filled_cells_down += 1;
             }
         }
+        accumulated += filled_cells_x as f64 * self.filled_cells_x;
+        accumulated += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
+        accumulated += filled_cells_down as f64 * self.filled_cells_down;
+        accumulated += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
         if node.mv.y <= 35 {
             let move_height = 39 - node.mv.y;
             accumulated += (move_height as f64) * self.move_height;
@@ -114,9 +125,6 @@ impl Evaluator for StandardEvaluator {
         accumulated += ((holes * holes) as f64) * self.holes_sq;
         accumulated += (hole_depths as f64) * self.hole_depths;
         accumulated += (hole_depths_sq as f64) * self.hole_depths_sq;
-        let fit = (filled_edge_tiles as f64) / (total_edge_tiles as f64);
-        accumulated += fit * self.piece_fit;
-        accumulated += fit * fit * self.piece_fit_sq;
         accumulated += (max_height as f64) * self.max_height;
         accumulated += ((max_height * max_height) as f64) * self.max_height_sq;
         accumulated += (wells as f64) * self.wells;
