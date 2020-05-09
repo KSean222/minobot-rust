@@ -59,10 +59,13 @@ impl<T: Evaluator> Bot<T> {
         self.queue = queue;
     }
     pub fn think(&mut self) -> bool {
-        Self::update_child(&self.settings, self.root.as_mut().unwrap(), &mut self.pathfinder, &self.queue, &self.evaluator);
-        self.root.as_ref().unwrap().finished
+        let mut root = self.root.take().unwrap();
+        self.update_child(&mut root);
+        let finished = root.finished;
+        self.root.replace(root);
+        finished
     }
-    fn update_child(settings: &BotSettings, parent: &mut Node, pathfinder: &mut Pathfinder, queue: &[Tetrimino], evaluator: &T) -> (f64, u32) {
+    fn update_child(&mut self, parent: &mut Node) -> (f64, u32) {
         let mut child = None;
         let mut score = std::f64::NEG_INFINITY;
         for c in parent.children.iter_mut() {
@@ -78,23 +81,23 @@ impl<T: Evaluator> Bot<T> {
             }
         }
         if let Some(child) = child {
-            let eval = Self::update_child(settings, child, pathfinder, queue, evaluator);
+            let eval = self.update_child(child);
             parent.score += eval.0;
             parent.sims += eval.1;
             eval
         } else if parent.children.is_empty() {
-            fn create_child<T: Evaluator>(mv: PieceState, parent: &mut Node, queue: &[Tetrimino], child_depth: u32, evaluator: &T, uses_hold: bool) -> f64 {
+            fn create_child<T: Evaluator>(bot: &Bot<T>, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) -> f64 {
                 let mut board = parent.board.clone();
                 board.state = mv;
                 let mut child_depth = child_depth;
                 if uses_hold {
                     let used = board.hold.is_none();
-                    board.hold_piece(queue[child_depth as usize]);
+                    board.hold_piece(bot.queue[child_depth as usize]);
                     if used {
                         child_depth += 1;
                     }
                 }
-                let lock = board.hard_drop(queue[child_depth as usize]);
+                let lock = board.hard_drop(bot.queue[child_depth as usize]);
                 child_depth += 1;
                 if !lock.block_out {
                     let mut child = Node {
@@ -106,9 +109,9 @@ impl<T: Evaluator> Bot<T> {
                         score: 0.0,
                         sims: 0,
                         uses_hold,
-                        finished: child_depth as usize >= queue.len()
+                        finished: child_depth as usize >= bot.queue.len()
                     };
-                    let (accumulated, transient) = evaluator.evaluate(&child, parent);
+                    let (accumulated, transient) = bot.evaluator.evaluate(&child, parent);
                     child.score = accumulated + transient;
                     child.sims = 1;
                     parent.children.push(child);
@@ -119,16 +122,16 @@ impl<T: Evaluator> Bot<T> {
             }
             let mut score = 0.0;
             let child_depth = parent.depth;
-            for mv in pathfinder.get_moves(&mut parent.board) {
-                score += create_child(mv, parent, queue, child_depth, evaluator, false);
+            for mv in self.pathfinder.get_moves(&mut parent.board) {
+                score += create_child(&self, mv, false, child_depth, parent);
             }
-            if settings.use_hold {
+            if self.settings.use_hold {
                 let mut hold_board = parent.board.clone();
                 let used = if hold_board.hold.is_none() { 1 } else { 0 };
-                hold_board.hold_piece(queue[child_depth as usize]);
-                if ((child_depth + used) as usize) < queue.len() {
-                    for mv in pathfinder.get_moves(&mut hold_board) {
-                        score += create_child(mv, parent, queue, child_depth, evaluator, true);
+                hold_board.hold_piece(self.queue[child_depth as usize]);
+                if ((child_depth + used) as usize) < self.queue.len() {
+                    for mv in self.pathfinder.get_moves(&mut hold_board) {
+                        score += create_child(&self, mv, true, child_depth, parent);
                     }
                 }
             }
