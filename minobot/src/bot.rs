@@ -90,12 +90,12 @@ impl<T: Evaluator> Bot<T> {
                 node.children[child_index].score = eval.0 + eval.1;
                 (eval.0, 1)
             })
-        } else if node.children.len() > 0 {
-            node.finished = true;
-            Some((0.0, 0))
-        } else {
+        } else if node.children.is_empty() {
             self.expand_node(node);
             None
+        } else {
+            node.finished = true;
+            Some((0.0, 0))
         }
     }
     fn expand_node(&mut self, node: &mut Node) {
