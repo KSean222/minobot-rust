@@ -19,7 +19,7 @@ pub struct BotSettings {
 impl Default for BotSettings {
     fn default() -> Self {
         BotSettings {
-            use_hold: false
+            use_hold: true
         }
     }
 }
@@ -101,7 +101,6 @@ impl<T: Evaluator> Bot<T> {
     fn expand_node(&mut self, node: &mut Node) {
         fn create_child<T: Evaluator>(bot: &Bot<T>, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) {
             let mut board = parent.board.clone();
-            board.state = mv;
             let mut child_depth = child_depth;
             if uses_hold {
                 let used = board.hold.is_none();
@@ -110,6 +109,7 @@ impl<T: Evaluator> Bot<T> {
                     child_depth += 1;
                 }
             }
+            board.state = mv;
             let lock = board.hard_drop(bot.queue[child_depth as usize]);
             child_depth += 1;
             parent.children.push(Node {
