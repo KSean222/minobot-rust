@@ -84,9 +84,11 @@ impl Evaluator for StandardEvaluator {
                             wells += 1;
                         }
                     }
-                } else if heights[x as usize] == 0 {
-                    heights[x as usize] = height;
-                    max_height = max_height.max(height);
+                } else {
+                    if heights[x as usize] == 0 {
+                        heights[x as usize] = height;
+                        max_height = max_height.max(height);
+                    }
                     if node.board.get_cell(x - 1, y) == CellType::Empty && node.board.get_cell(x + 1, y) == CellType::Empty {
                         spike_streak += 1;
                         if spike_streak == 2 {
