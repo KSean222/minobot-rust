@@ -13,3 +13,5 @@ ggez = "0.5.1"
 enumset = "0.4.0"
 rand = "0.7.0"
 rand_pcg = "0.2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"

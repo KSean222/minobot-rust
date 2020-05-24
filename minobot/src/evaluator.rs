@@ -1,10 +1,13 @@
+use serde::{ Serialize, Deserialize };
+
 use crate::bot::Node;
 use minotetris::*;
 
-pub trait Evaluator {
+pub trait Evaluator: Send {
     fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64);
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct StandardEvaluator {
     holes: f64,
     holes_sq: f64,

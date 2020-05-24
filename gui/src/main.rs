@@ -3,8 +3,11 @@ use ggez::event;
 use ggez::graphics::{ self, Image, Rect, DrawParam };
 use ggez::graphics::spritebatch::SpriteBatch;
 use ggez::Context;
+use serde::{ Serialize, Deserialize };
 use enumset::EnumSet;
 use std::boxed::Box;
+use std::io::{ BufReader, BufWriter };
+use std::fs::File;
 use minotetris::*;
 
 mod tetris;
@@ -19,12 +22,58 @@ pub struct MainState {
     event_buffer: Vec<TetrisEvent>
 }
 
+const OPTIONS_PATH: &'static str = "minobot_options.yaml";
+
+#[derive(Default, Serialize, Deserialize)]
+struct BotOptions {
+    evaluator: minobot::evaluator::StandardEvaluator,
+    settings: minobot::bot::BotSettings
+}
+
+#[derive(Debug)]
+enum BotOptionsError {
+    FileError(std::io::Error),
+    YamlParsingError(serde_yaml::Error)
+}
+
+impl From<std::io::Error> for BotOptionsError {
+    fn from(err: std::io::Error) -> BotOptionsError {
+        BotOptionsError::FileError(err)
+    }
+}
+
+impl From<serde_yaml::Error> for BotOptionsError {
+    fn from(err: serde_yaml::Error) -> BotOptionsError {
+        BotOptionsError::YamlParsingError(err)
+    }
+}
+
 impl MainState {
     fn new(ctx: &mut Context) -> ggez::GameResult<MainState> {
+        fn read_options() -> Result<BotOptions, BotOptionsError> {
+            match File::open(&OPTIONS_PATH) {
+                Ok(file) => Ok(serde_yaml::from_reader(BufReader::new(file))?),
+                Err(e) => if e.kind() == std::io::ErrorKind::NotFound {
+                    let options = BotOptions::default();
+                    let file = BufWriter::new(File::create(OPTIONS_PATH)?);
+                    serde_yaml::to_writer(file, &options)?;
+                    Ok(options)
+                } else {
+                    Err(e.into())
+                }
+            }
+        }
+        let options = match read_options() {
+            Ok(options) => options,
+            Err(err) => {
+                println!("Error reading options file: {:?}", err);
+                BotOptions::default()
+            }
+        };
         let state = MainState {
             res: Resources::new(ctx),
             tetris: Tetris::new(TetrisSettings::default()),
-            controller: Box::new(BotController::new()),
+            controller: Box::new(BotController::new(options.evaluator, options.settings)),
             event_buffer: Vec::new()
         };
         Ok(state)

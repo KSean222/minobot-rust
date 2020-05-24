@@ -12,6 +12,7 @@ pub struct Bot<T=StandardEvaluator> {
     pub settings: BotSettings
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct BotSettings {
     pub use_hold: bool
 }
