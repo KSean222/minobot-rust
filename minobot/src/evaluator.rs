@@ -19,6 +19,8 @@ pub struct StandardEvaluator {
     filled_cells_x_sq: f64,
     filled_cells_down: f64,
     filled_cells_down_sq: f64,
+    parity: f64,
+    parity_sq: f64,
     max_height: f64,
     max_height_sq: f64,
     wells: f64,
@@ -41,6 +43,8 @@ impl Default for  StandardEvaluator {
             filled_cells_x_sq: 10.0,
             filled_cells_down: 0.0,
             filled_cells_down_sq: 10.0,
+            parity: 0.0,
+            parity_sq: -2.0,
             max_height: -10.0,
             max_height_sq: 0.0,
             wells: 0.0,
@@ -69,6 +73,8 @@ impl Evaluator for StandardEvaluator {
         let mut max_height = 0;
         let mut wells = 0;
         let mut spikes = 0;
+        let mut even_cells = 0i32;
+        let mut odd_cells = 0i32;
         for x in 0..10 {
             let mut well_streak = 0;
             let mut spike_streak = 0;
@@ -88,6 +94,11 @@ impl Evaluator for StandardEvaluator {
                         }
                     }
                 } else {
+                    if (x + y) & 1 == 0 {
+                        even_cells += 1;
+                    } else {
+                        odd_cells += 1;
+                    }
                     if heights[x as usize] == 0 {
                         heights[x as usize] = height;
                         max_height = max_height.max(height);
@@ -116,6 +127,9 @@ impl Evaluator for StandardEvaluator {
                 filled_cells_down += 1;
             }
         }
+        let parity_diff = (even_cells - odd_cells).abs();
+        accumulated += parity_diff as f64 * self.parity;
+        accumulated += (parity_diff * parity_diff) as f64 * self.parity_sq;
         accumulated += filled_cells_x as f64 * self.filled_cells_x;
         accumulated += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
         accumulated += filled_cells_down as f64 * self.filled_cells_down;
