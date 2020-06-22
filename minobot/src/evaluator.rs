@@ -4,7 +4,7 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64);
+    fn evaluate(&self, node: &Node, parent: &Node) -> f64;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -71,9 +71,8 @@ impl Default for  StandardEvaluator {
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64) {
-        let mut accumulated = 0.0;
-        let mut transient = 0.0;
+    fn evaluate(&self, node: &Node, parent: &Node) -> f64 {
+        let mut score = 0.0;
         let mut heights = [0; 10];
         let mut holes = 0;
         let mut hole_depths = 0;
@@ -120,8 +119,8 @@ impl Evaluator for StandardEvaluator {
                 }
             }
             let well_streak = well_streak as f64;
-            accumulated += well_streak * self.well_depth;
-            accumulated += well_streak * well_streak * self.well_depth_sq;
+            score += well_streak * self.well_depth;
+            score += well_streak * well_streak * self.well_depth_sq;
         }
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
@@ -139,28 +138,28 @@ impl Evaluator for StandardEvaluator {
             }
         }
         let parity_diff = (even_cells - odd_cells).abs();
-        accumulated += parity_diff as f64 * self.parity;
-        accumulated += (parity_diff * parity_diff) as f64 * self.parity_sq;
-        accumulated += filled_cells_x as f64 * self.filled_cells_x;
-        accumulated += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
-        accumulated += filled_cells_down as f64 * self.filled_cells_down;
-        accumulated += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
+        score += parity_diff as f64 * self.parity;
+        score += (parity_diff * parity_diff) as f64 * self.parity_sq;
+        score += filled_cells_x as f64 * self.filled_cells_x;
+        score += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
+        score += filled_cells_down as f64 * self.filled_cells_down;
+        score += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
         if node.mv.y <= 35 {
             let move_height = 39 - node.mv.y;
-            accumulated += (move_height as f64) * self.move_height;
-            accumulated += ((move_height * move_height) as f64) * self.move_height_sq;
+            score += (move_height as f64) * self.move_height;
+            score += ((move_height * move_height) as f64) * self.move_height_sq;
         }
-        accumulated += self.line_clear[node.lock.lines_cleared as usize];
-        accumulated += (holes as f64) * self.holes;
-        accumulated += ((holes * holes) as f64) * self.holes_sq;
-        accumulated += (hole_depths as f64) * self.hole_depths;
-        accumulated += (hole_depths_sq as f64) * self.hole_depths_sq;
-        accumulated += (max_height as f64) * self.max_height;
-        accumulated += ((max_height * max_height) as f64) * self.max_height_sq;
-        accumulated += (wells as f64) * self.wells;
-        accumulated += ((wells * wells) as f64) * self.wells_sq;
-        accumulated += (spikes as f64) * self.spikes;
-        accumulated += ((spikes * spikes) as f64) * self.spikes_sq;
+        score += self.line_clear[node.lock.lines_cleared as usize];
+        score += (holes as f64) * self.holes;
+        score += ((holes * holes) as f64) * self.holes_sq;
+        score += (hole_depths as f64) * self.hole_depths;
+        score += (hole_depths_sq as f64) * self.hole_depths_sq;
+        score += (max_height as f64) * self.max_height;
+        score += ((max_height * max_height) as f64) * self.max_height_sq;
+        score += (wells as f64) * self.wells;
+        score += ((wells * wells) as f64) * self.wells_sq;
+        score += (spikes as f64) * self.spikes;
+        score += ((spikes * spikes) as f64) * self.spikes_sq;
         let mut bumpiness = 0.0;
         let mut bumpiness_sq = 0.0;
         for (i, &h) in heights.iter().enumerate().skip(1) {
@@ -168,8 +167,8 @@ impl Evaluator for StandardEvaluator {
             bumpiness += diff;
             bumpiness_sq += diff * diff;
         }
-        accumulated += bumpiness * self.bumpiness;
-        accumulated += bumpiness_sq * self.bumpiness_sq;
-        (accumulated, transient)
+        score += bumpiness * self.bumpiness;
+        score += bumpiness_sq * self.bumpiness_sq;
+        score
     }
 }

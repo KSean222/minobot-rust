@@ -118,9 +118,9 @@ impl<T: Evaluator> Bot<T> {
                 finished: child_depth as usize >= bot.queue.len()
             };
             let eval = bot.evaluator.evaluate(&child, parent);
-            child.score = eval.0 + eval.1;
+            child.score = eval;
             parent.children.push(child);
-            eval.0
+            eval
         }
         let child_depth = node.depth;
         let mut score = 0.0;
