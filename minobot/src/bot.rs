@@ -66,41 +66,34 @@ impl<T: Evaluator> Bot<T> {
         self.root.replace(root);
         finished
     }
-    fn update_child(&mut self, node: &mut Node) -> Option<(f64, u32)> {
-        let mut child_index = None;
+    fn update_child(&mut self, node: &mut Node) -> (f64, u32) {
+        let mut child = None;
         let mut score = std::f64::NEG_INFINITY;
-        for (i, c) in node.children.iter().enumerate() {
-            if c.finished {
-                continue;
-            }
-            use std::f64::consts::SQRT_2;
-            let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
-                * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
-            if child_score > score {
-                child_index = Some(i);
-                score = child_score;
+        for c in node.children.iter_mut() {
+            if !c.finished {
+                use std::f64::consts::SQRT_2;
+                let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
+                    * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
+                if child_score > score {
+                    child = Some(c);
+                    score = child_score;
+                }
             }
         }
-        if let Some(child_index) = child_index {
-            Some(if let Some(eval) = self.update_child(&mut node.children[child_index]) {
-                node.score += eval.0;
-                node.sims += eval.1;
-                eval
-            } else {
-                let eval = self.evaluator.evaluate(&node.children[child_index], node);
-                node.children[child_index].score = eval.0 + eval.1;
-                (eval.0, 1)
-            })
+        if let Some(child) = child {
+            let (score, sims) = self.update_child(child);
+            node.score += score;
+            node.sims += sims;
+            (score, sims)
         } else if node.children.is_empty() {
-            self.expand_node(node);
-            None
+            self.expand_node(node)
         } else {
             node.finished = true;
-            Some((0.0, 0))
+            (0.0, 0)
         }
     }
-    fn expand_node(&mut self, node: &mut Node) {
-        fn create_child<T: Evaluator>(bot: &Bot<T>, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) {
+    fn expand_node(&mut self, node: &mut Node) -> (f64, u32) {
+        fn create_child<T: Evaluator>(bot: &Bot<T>, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) -> f64 {
             let mut board = parent.board.clone();
             let mut child_depth = child_depth;
             if uses_hold {
@@ -113,7 +106,7 @@ impl<T: Evaluator> Bot<T> {
             board.state = mv;
             let lock = board.hard_drop(bot.queue[child_depth as usize]);
             child_depth += 1;
-            parent.children.push(Node {
+            let mut child = Node {
                 board,
                 mv,
                 lock,
@@ -123,11 +116,16 @@ impl<T: Evaluator> Bot<T> {
                 sims: 1,
                 uses_hold,
                 finished: child_depth as usize >= bot.queue.len()
-            });
+            };
+            let eval = bot.evaluator.evaluate(&child, parent);
+            child.score = eval.0 + eval.1;
+            parent.children.push(child);
+            eval.0
         }
         let child_depth = node.depth;
+        let mut score = 0.0;
         for mv in self.pathfinder.get_moves(&mut node.board) {
-            create_child(&self, mv, false, child_depth, node);
+            score += create_child(&self, mv, false, child_depth, node);
         }
         if self.settings.use_hold {
             let mut hold_board = node.board.clone();
@@ -135,10 +133,18 @@ impl<T: Evaluator> Bot<T> {
             hold_board.hold_piece(self.queue[child_depth as usize]);
             if ((child_depth + used) as usize) < self.queue.len() {
                 for mv in self.pathfinder.get_moves(&mut hold_board) {
-                    create_child(&self, mv, true, child_depth, node);
+                    score += create_child(&self, mv, true, child_depth, node);
                 }
             }
         }
+        let sims = node.children.len() as u32;
+        if node.children.is_empty() {
+            node.finished = true;
+        } else {
+            node.score += score;
+            node.sims += sims;
+        }
+        (score, sims)
     }
     pub fn next_move(&mut self) -> Option<&Node> {
         self.queue.remove(0);
