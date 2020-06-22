@@ -15,7 +15,7 @@ pub struct PieceState {
     pub r: u8
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TspinType {
     None,
     Mini,
@@ -94,7 +94,8 @@ pub struct Board<T=u16> where T: Row {
     pub current: Tetrimino,
     pub hold: Option<Tetrimino>,
     pub state: PieceState,
-    pub held: bool
+    pub held: bool,
+    pub tspin: TspinType
 }
 
 impl std::fmt::Debug for Board {
@@ -114,6 +115,7 @@ impl<T: Row> Board<T> {
                 y: 0,
                 r: 0
             },
+            tspin: TspinType::None,
             held: false
         };
         board.set_piece(start_piece);
@@ -174,6 +176,7 @@ impl<T: Row> Board<T> {
     }
     pub fn set_piece(&mut self, piece: Tetrimino){
         self.current = piece;
+        self.tspin = TspinType::None;
         self.state.x = 4;
         self.state.y = 19;
         self.state.r = 0;
@@ -203,13 +206,46 @@ impl<T: Row> Board<T> {
         self.rotate(if self.state.r < 3 { self.state.r + 1 } else { 0 })
     }
     fn rotate(&mut self, r: u8) -> bool {
-        let current = self.current;
-        let from_table = current.offset_table(self.state.r);
-        let to_table = current.offset_table(r);
-        for (from, to) in from_table.iter().zip(to_table.iter()) {
+        let from_table = self.current.offset_table(self.state.r);
+        let to_table = self.current.offset_table(r);
+        for (i, (from, to)) in from_table.iter().zip(to_table.iter()).enumerate() {
             let x = self.state.x + from.0 - to.0;
             let y = self.state.y - (from.1 - to.1);
             if self.try_move(x, y, r) {
+                if self.current == Tetrimino::T {
+                    const CORNER_CELLS: [(i32, i32); 4] = [
+                        (-1, -1),
+                        (-1, 1),
+                        (1, 1),
+                        (1, -1)
+                    ];
+                    let mut corners = 0;
+                    for &(corner_x, corner_y) in &CORNER_CELLS {
+                        if self.get_cell(x + corner_x, y + corner_y) != CellType::Empty {
+                            corners += 1;
+                        }
+                    }
+                    if corners > 2 {
+                        let front_corner_cells = match self.state.r {
+                            0 => [(-1, -1), (1, -1)],
+                            1 => [(1, -1), (1, 1)],
+                            2 => [(-1, 1), (1, 1)],
+                            3 => [(-1, 1), (-1, -1)],
+                            _ => unreachable!()
+                        };
+                        let mut front_corners = 0;
+                        for &(corner_x, corner_y) in &front_corner_cells {
+                            if self.get_cell(x + corner_x, y + corner_y) != CellType::Empty {
+                                front_corners += 1;
+                            }
+                        }
+                        self.tspin = if front_corners >= 2 || (i == 4 && (self.state.r == 0 || self.state.r == 2)) {
+                            TspinType::Full
+                        } else {
+                            TspinType::Mini
+                        };
+                    }
+                }
                 return true;
             }
         }
@@ -217,6 +253,7 @@ impl<T: Row> Board<T> {
     }
     fn try_move(&mut self, x: i32, y: i32, r: u8) -> bool {
         if self.piece_fits(x, y, r) {
+            self.tspin = TspinType::None;
             self.state = PieceState {
                 x,
                 y,
@@ -240,7 +277,8 @@ impl Board<ColoredRow> {
             current: self.current,
             hold: self.hold,
             state: self.state,
-            held: self.held
+            held: self.held,
+            tspin: self.tspin
         }
     }
 }
