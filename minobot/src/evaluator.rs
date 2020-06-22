@@ -25,18 +25,22 @@ pub struct StandardEvaluator {
     max_height_sq: f64,
     wells: f64,
     wells_sq: f64,
+    well_depth: f64,
+    well_depth_sq: f64,
     spikes: f64,
     spikes_sq: f64,
+    bumpiness: f64,
+    bumpiness_sq: f64,
     line_clear: [f64; 5]
 }
 
 impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
-            holes: 0.0,
-            holes_sq: -1.0,
-            hole_depths: 0.0,
-            hole_depths_sq: -0.5,
+            holes: -2.0,
+            holes_sq: -0.1,
+            hole_depths: -1.0,
+            hole_depths_sq: 0.0,
             move_height: 0.0,
             move_height_sq: -1.0,
             filled_cells_x: 0.0,
@@ -45,12 +49,16 @@ impl Default for  StandardEvaluator {
             filled_cells_down_sq: 10.0,
             parity: 0.0,
             parity_sq: -2.0,
-            max_height: -10.0,
+            max_height: -1.0,
             max_height_sq: 0.0,
             wells: 0.0,
-            wells_sq: -1.0,
+            wells_sq: 0.0,
+            well_depth: -1.0,
+            well_depth_sq: -1.0,
             spikes: 0.0,
-            spikes_sq: -1.0,
+            spikes_sq: 0.0,
+            bumpiness: -0.5,
+            bumpiness_sq: -0.25,
             line_clear: [
                 0.0,
                 -50.0,
@@ -111,6 +119,9 @@ impl Evaluator for StandardEvaluator {
                     }
                 }
             }
+            let well_streak = well_streak as f64;
+            accumulated += well_streak * self.well_depth;
+            accumulated += well_streak * well_streak * self.well_depth_sq;
         }
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
@@ -150,6 +161,15 @@ impl Evaluator for StandardEvaluator {
         accumulated += ((wells * wells) as f64) * self.wells_sq;
         accumulated += (spikes as f64) * self.spikes;
         accumulated += ((spikes * spikes) as f64) * self.spikes_sq;
+        let mut bumpiness = 0.0;
+        let mut bumpiness_sq = 0.0;
+        for (i, &h) in heights.iter().enumerate().skip(1) {
+            let diff = (h - heights[i]).abs() as f64;
+            bumpiness += diff;
+            bumpiness_sq += diff * diff;
+        }
+        accumulated += bumpiness * self.bumpiness;
+        accumulated += bumpiness_sq * self.bumpiness_sq;
         (accumulated, transient)
     }
 }
