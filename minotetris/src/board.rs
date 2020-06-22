@@ -73,7 +73,7 @@ impl Row for ColoredRow {
     fn filled(&self) -> bool {
         self.row
             .iter()
-            .all(|c| *c != CellType::Empty)
+            .all(|&c| c != CellType::Empty)
     }
 }
 
@@ -128,9 +128,10 @@ impl<T: Row> Board<T> {
         } else {
             self.held = true;
             let temp = self.current;
-            self.set_piece(match self.hold {
-                Some(hold) => hold,
-                None => next
+            self.set_piece(if let Some(hold) = self.hold {
+                hold
+            } else {
+                next
             });
             self.hold.replace(temp);
             true
@@ -205,11 +206,9 @@ impl<T: Row> Board<T> {
         let current = self.current;
         let from_table = current.offset_table(self.state.r);
         let to_table = current.offset_table(r);
-        for i in 0..from_table.len() {
-            let (from_x, from_y) = from_table[i];
-            let (to_x, to_y) = to_table[i];
-            let x = self.state.x + from_x - to_x;
-            let y = self.state.y - (from_y - to_y);
+        for (from, to) in from_table.iter().zip(to_table.iter()) {
+            let x = self.state.x + from.0 - to.0;
+            let y = self.state.y - (from.1 - to.1);
             if self.try_move(x, y, r) {
                 return true;
             }
