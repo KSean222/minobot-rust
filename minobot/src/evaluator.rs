@@ -31,6 +31,8 @@ pub struct StandardEvaluator {
     spikes_sq: f64,
     bumpiness: f64,
     bumpiness_sq: f64,
+    row_transitions: f64,
+    row_transitions_sq: f64,
     line_clear: [f64; 5]
 }
 
@@ -59,12 +61,14 @@ impl Default for  StandardEvaluator {
             spikes_sq: 0.0,
             bumpiness: -20.0,
             bumpiness_sq: -5.0,
+            row_transitions: -1.0,
+            row_transitions_sq: 0.0,
             line_clear: [
                 0.0,
                 -2000.0,
                 -1500.0,
                 -1000.0,
-                500.0
+                1000.0
             ]
         }
     }
@@ -122,6 +126,16 @@ impl Evaluator for StandardEvaluator {
             score += well_streak * self.well_depth;
             score += well_streak * well_streak * self.well_depth_sq;
         }
+        let mut row_transitions = 0;
+        for y in 20..40 {
+            for x in 0..11 {
+                if node.board.get_cell(x - 1, y) != node.board.get_cell(x, y) {
+                    row_transitions += 1;
+                }
+            }
+        }
+        score += row_transitions as f64 * self.row_transitions;
+        score += (row_transitions * row_transitions) as f64 * self.row_transitions_sq;
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
         for &(x, y) in &parent.board.current.cells(node.mv.r) {
