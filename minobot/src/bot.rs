@@ -52,6 +52,8 @@ impl<T: Evaluator> Bot<T> {
                 block_out: false
             },
             value: 0.0,
+            reward: 0.0,
+            max_child_reward: 0.0,
             visits: 1,
             uses_hold: false,
             finished: false,
@@ -66,7 +68,7 @@ impl<T: Evaluator> Bot<T> {
         self.root.replace(root);
         finished
     }
-    fn update_child(&mut self, node: &mut Node) -> (f64, u32) {
+    fn update_child(&mut self, node: &mut Node) -> ((f64, f64), u32) {
         let mut child_index = None;
         let mut score = std::f64::NEG_INFINITY;
         for (i, c) in node.children.iter().enumerate() {
@@ -83,57 +85,30 @@ impl<T: Evaluator> Bot<T> {
             }
         }
         if let Some(child_index) = child_index {
-            let (score, sims) = self.update_child(&mut node.children[child_index]);
+            let ((value, reward), visits) = self.update_child(&mut node.children[child_index]);
             let child = node.children.remove(child_index);
             let child_index = node.children
                 .iter()
                 .position(|c| c.value > child.value)
                 .unwrap_or(node.children.len());
             node.children.insert(child_index, child);
-            node.value = node.value.max(score);
-            node.visits += sims;
-            (score, sims)
+            if value + reward > node.value + node.max_child_reward {
+                node.value = value;
+                node.max_child_reward = reward;
+            }
+            node.visits += visits;
+            ((value, node.reward + reward), visits)
         } else if node.children.is_empty() {
             self.expand_node(node)
         } else {
             node.finished = true;
-            (0.0, 0)
+            ((0.0, 0.0), 0)
         }
     }
-    fn expand_node(&mut self, node: &mut Node) -> (f64, u32) {
-        fn create_child<T: Evaluator>(bot: &Bot<T>, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) -> f64 {
-            let mut board = parent.board.clone();
-            let mut child_depth = child_depth;
-            if uses_hold {
-                let used = board.hold.is_none();
-                board.hold_piece(bot.queue[child_depth as usize]);
-                if used {
-                    child_depth += 1;
-                }
-            }
-            board.state = mv;
-            let lock = board.hard_drop(bot.queue[child_depth as usize]);
-            child_depth += 1;
-            let mut child = Node {
-                board,
-                mv,
-                lock,
-                children: Vec::new(),
-                depth: child_depth,
-                value: 0.0,
-                visits: 1,
-                uses_hold,
-                finished: child_depth as usize >= bot.queue.len()
-            };
-            let eval = bot.evaluator.evaluate(&child, parent);
-            child.value = eval;
-            parent.children.push(child);
-            eval
-        }
+    fn expand_node(&mut self, node: &mut Node) -> ((f64, f64), u32) {
         let child_depth = node.depth;
-        let mut score = std::f64::NEG_INFINITY;
         for mv in self.pathfinder.get_moves(&mut node.board) {
-            score = score.max(create_child(&self, mv, false, child_depth, node));
+            self.create_child(mv, false, child_depth, node);
         }
         if self.settings.use_hold {
             let mut hold_board = node.board.clone();
@@ -141,19 +116,55 @@ impl<T: Evaluator> Bot<T> {
             hold_board.hold_piece(self.queue[child_depth as usize]);
             if ((child_depth + used) as usize) < self.queue.len() {
                 for mv in self.pathfinder.get_moves(&mut hold_board) {
-                    score = score.max(create_child(&self, mv, true, child_depth, node))
+                    self.create_child(mv, true, child_depth, node);
                 }
             }
         }
-        let sims = node.children.len() as u32;
         if node.children.is_empty() {
             node.finished = true;
+            ((std::f64::NEG_INFINITY, std::f64::NEG_INFINITY), 0)
         } else {
-            node.children.sort_unstable_by(|a, b| a.value.partial_cmp(&b.value).unwrap());
-            node.value = score;
-            node.visits += sims;
+            node.children.sort_unstable_by(|a, b| {
+                (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
+            });
+            let best = node.children.last().unwrap();
+            let visits = node.children.len() as u32;
+            node.value = best.value;
+            node.max_child_reward = best.reward;
+            node.visits += visits;
+            ((best.value, node.reward + best.reward), visits)
         }
-        (score, sims)
+    }
+    fn create_child(&self, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) {
+        let mut board = parent.board.clone();
+        let mut child_depth = child_depth;
+        if uses_hold {
+            let used = board.hold.is_none();
+            board.hold_piece(self.queue[child_depth as usize]);
+            if used {
+                child_depth += 1;
+            }
+        }
+        board.state = mv;
+        let lock = board.hard_drop(self.queue[child_depth as usize]);
+        child_depth += 1;
+        let mut child = Node {
+            board,
+            mv,
+            lock,
+            children: Vec::new(),
+            depth: child_depth,
+            value: 0.0,
+            reward: 0.0,
+            max_child_reward: 0.0,
+            visits: 1,
+            uses_hold,
+            finished: child_depth as usize >= self.queue.len()
+        };
+        let (value, reward) = self.evaluator.evaluate(&child, parent);
+        child.value = value;
+        child.reward = reward;
+        parent.children.push(child);
     }
     pub fn next_move(&mut self) -> Option<&Node> {
         self.queue.remove(0);
@@ -195,6 +206,8 @@ pub struct Node {
 
     pub children: Vec<Node>,
     pub value: f64,
+    pub reward: f64,
+    pub max_child_reward: f64,
     pub visits: u32,
     pub finished: bool,
     pub depth: u32

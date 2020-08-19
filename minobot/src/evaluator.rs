@@ -4,7 +4,7 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, parent: &Node) -> f64;
+    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -52,7 +52,7 @@ impl Default for  StandardEvaluator {
             parity: 0.0,
             parity_sq: -2.0,
             max_height: -1.0,
-            max_height_sq: 0.0,
+            max_height_sq: -0.5,
             wells: -1.0,
             wells_sq: 0.0,
             well_depth: -0.0,
@@ -75,8 +75,10 @@ impl Default for  StandardEvaluator {
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, parent: &Node) -> f64 {
+    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64) {
         let mut value = 0.0;
+        let mut reward = 0.0;
+
         let mut heights = [0; 10];
         let mut holes = 0;
         let mut hole_depths = 0;
@@ -163,7 +165,7 @@ impl Evaluator for StandardEvaluator {
             value += (move_height as f64) * self.move_height;
             value += ((move_height * move_height) as f64) * self.move_height_sq;
         }
-        value += self.line_clear[node.lock.lines_cleared as usize];
+        reward += self.line_clear[node.lock.lines_cleared as usize];
         value += (holes as f64) * self.holes;
         value += ((holes * holes) as f64) * self.holes_sq;
         value += (hole_depths as f64) * self.hole_depths;
@@ -183,6 +185,6 @@ impl Evaluator for StandardEvaluator {
         }
         value += bumpiness * self.bumpiness;
         value += bumpiness_sq * self.bumpiness_sq;
-        value
+        (value, reward)
     }
 }
