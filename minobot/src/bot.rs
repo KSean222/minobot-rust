@@ -51,8 +51,8 @@ impl<T: Evaluator> Bot<T> {
                 lines_cleared: 0,
                 block_out: false
             },
-            score: 0.0,
-            sims: 1,
+            value: 0.0,
+            visits: 1,
             uses_hold: false,
             finished: false,
             depth: 0
@@ -75,7 +75,7 @@ impl<T: Evaluator> Bot<T> {
                 // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
                 //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
                 let child_score = (i as f64) / (node.children.len() as f64) +
-                    1.0 * SQRT_2 * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
+                    1.0 * SQRT_2 * ((node.visits as f64).ln() / (c.visits as f64)).sqrt();
                 if child_score > score {
                     child_index = Some(i);
                     score = child_score;
@@ -87,11 +87,11 @@ impl<T: Evaluator> Bot<T> {
             let child = node.children.remove(child_index);
             let child_index = node.children
                 .iter()
-                .position(|c| c.score > child.score)
+                .position(|c| c.value > child.value)
                 .unwrap_or(node.children.len());
             node.children.insert(child_index, child);
-            node.score = node.score.max(score);
-            node.sims += sims;
+            node.value = node.value.max(score);
+            node.visits += sims;
             (score, sims)
         } else if node.children.is_empty() {
             self.expand_node(node)
@@ -120,13 +120,13 @@ impl<T: Evaluator> Bot<T> {
                 lock,
                 children: Vec::new(),
                 depth: child_depth,
-                score: 0.0,
-                sims: 1,
+                value: 0.0,
+                visits: 1,
                 uses_hold,
                 finished: child_depth as usize >= bot.queue.len()
             };
             let eval = bot.evaluator.evaluate(&child, parent);
-            child.score = eval;
+            child.value = eval;
             parent.children.push(child);
             eval
         }
@@ -149,9 +149,9 @@ impl<T: Evaluator> Bot<T> {
         if node.children.is_empty() {
             node.finished = true;
         } else {
-            node.children.sort_unstable_by(|a, b| a.score.partial_cmp(&b.score).unwrap());
-            node.score = score;
-            node.sims += sims;
+            node.children.sort_unstable_by(|a, b| a.value.partial_cmp(&b.value).unwrap());
+            node.value = score;
+            node.visits += sims;
         }
         (score, sims)
     }
@@ -159,7 +159,7 @@ impl<T: Evaluator> Bot<T> {
         self.queue.remove(0);
         let root = self.root.take().unwrap();
         //println!("{}", serde_json::to_string(&root).unwrap());
-        self.root = root.children.into_iter().max_by_key(|c| c.sims);
+        self.root = root.children.into_iter().max_by_key(|c| c.visits);
         if self.root.is_some() {
             Self::update_tree(self.root.as_mut().unwrap());
         }
@@ -194,8 +194,8 @@ pub struct Node {
     pub uses_hold: bool,
 
     pub children: Vec<Node>,
-    pub score: f64,
-    pub sims: u32,
+    pub value: f64,
+    pub visits: u32,
     pub finished: bool,
     pub depth: u32
 }

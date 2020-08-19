@@ -76,7 +76,7 @@ impl Default for  StandardEvaluator {
 
 impl Evaluator for StandardEvaluator {
     fn evaluate(&self, node: &Node, parent: &Node) -> f64 {
-        let mut score = 0.0;
+        let mut value = 0.0;
         let mut heights = [0; 10];
         let mut holes = 0;
         let mut hole_depths = 0;
@@ -123,8 +123,8 @@ impl Evaluator for StandardEvaluator {
                 }
             }
             let well_streak = well_streak as f64;
-            score += well_streak * self.well_depth;
-            score += well_streak * well_streak * self.well_depth_sq;
+            value += well_streak * self.well_depth;
+            value += well_streak * well_streak * self.well_depth_sq;
         }
         let mut row_transitions = 0;
         for y in 20..40 {
@@ -134,8 +134,8 @@ impl Evaluator for StandardEvaluator {
                 }
             }
         }
-        score += row_transitions as f64 * self.row_transitions;
-        score += (row_transitions * row_transitions) as f64 * self.row_transitions_sq;
+        value += row_transitions as f64 * self.row_transitions;
+        value += (row_transitions * row_transitions) as f64 * self.row_transitions_sq;
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
         for &(x, y) in &parent.board.current.cells(node.mv.r) {
@@ -152,28 +152,28 @@ impl Evaluator for StandardEvaluator {
             }
         }
         let parity_diff = (even_cells - odd_cells).abs();
-        score += parity_diff as f64 * self.parity;
-        score += (parity_diff * parity_diff) as f64 * self.parity_sq;
-        score += filled_cells_x as f64 * self.filled_cells_x;
-        score += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
-        score += filled_cells_down as f64 * self.filled_cells_down;
-        score += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
+        value += parity_diff as f64 * self.parity;
+        value += (parity_diff * parity_diff) as f64 * self.parity_sq;
+        value += filled_cells_x as f64 * self.filled_cells_x;
+        value += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
+        value += filled_cells_down as f64 * self.filled_cells_down;
+        value += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
         if node.mv.y <= 35 {
             let move_height = 39 - node.mv.y;
-            score += (move_height as f64) * self.move_height;
-            score += ((move_height * move_height) as f64) * self.move_height_sq;
+            value += (move_height as f64) * self.move_height;
+            value += ((move_height * move_height) as f64) * self.move_height_sq;
         }
-        score += self.line_clear[node.lock.lines_cleared as usize];
-        score += (holes as f64) * self.holes;
-        score += ((holes * holes) as f64) * self.holes_sq;
-        score += (hole_depths as f64) * self.hole_depths;
-        score += (hole_depths_sq as f64) * self.hole_depths_sq;
-        score += (max_height as f64) * self.max_height;
-        score += ((max_height * max_height) as f64) * self.max_height_sq;
-        score += (wells as f64) * self.wells;
-        score += ((wells * wells) as f64) * self.wells_sq;
-        score += (spikes as f64) * self.spikes;
-        score += ((spikes * spikes) as f64) * self.spikes_sq;
+        value += self.line_clear[node.lock.lines_cleared as usize];
+        value += (holes as f64) * self.holes;
+        value += ((holes * holes) as f64) * self.holes_sq;
+        value += (hole_depths as f64) * self.hole_depths;
+        value += (hole_depths_sq as f64) * self.hole_depths_sq;
+        value += (max_height as f64) * self.max_height;
+        value += ((max_height * max_height) as f64) * self.max_height_sq;
+        value += (wells as f64) * self.wells;
+        value += ((wells * wells) as f64) * self.wells_sq;
+        value += (spikes as f64) * self.spikes;
+        value += ((spikes * spikes) as f64) * self.spikes_sq;
         let mut bumpiness = 0.0;
         let mut bumpiness_sq = 0.0;
         for (i, &h) in heights.iter().enumerate().skip(1) {
@@ -181,8 +181,8 @@ impl Evaluator for StandardEvaluator {
             bumpiness += diff;
             bumpiness_sq += diff * diff;
         }
-        score += bumpiness * self.bumpiness;
-        score += bumpiness_sq * self.bumpiness_sq;
-        score
+        value += bumpiness * self.bumpiness;
+        value += bumpiness_sq * self.bumpiness_sq;
+        value
     }
 }
