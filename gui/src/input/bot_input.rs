@@ -54,7 +54,8 @@ impl BotController {
         let (tx, bot_rx) = mpsc::channel();
         let (bot_tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let mut bot = Bot::new(evaluator, settings);
+            let board = Board::new(Tetrimino::O);
+            let mut bot = Bot::new(board, evaluator, settings);
             let mut pathfinder = Pathfinder::new();
             let mut moves = 0;
             'handler: loop {
@@ -92,9 +93,9 @@ impl BotController {
                                     }
                                 }
                             }
-                            let root = bot.root.as_ref().unwrap();
+                            let root = &bot.root;
                             let mut board = root.board.clone();
-                            let next_hold_piece = bot.queue[0];
+                            let next_hold_piece = bot.data.queue[0];
                             let mut mv = PieceState {
                                 x: 0,
                                 y: 0,

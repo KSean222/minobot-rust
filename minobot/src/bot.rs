@@ -4,12 +4,16 @@ use crate::pathfinder::Pathfinder;
 use crate::evaluator::{ Evaluator, StandardEvaluator };
 use minotetris::*;
 
-pub struct Bot<T=StandardEvaluator> {
+pub struct Bot<E=StandardEvaluator> {
+    pub data: BotData<E>,
+    pub root: Node,
+}
+
+pub struct BotData<E> {
     pub queue: Vec<Tetrimino>,
-    pub root: Option<Node>,
+    pub settings: BotSettings,
     pathfinder: Pathfinder,
-    evaluator: T,
-    pub settings: BotSettings
+    evaluator: E,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -25,174 +29,40 @@ impl Default for BotSettings {
     }
 }
 
-impl<T: Evaluator> Bot<T> {
-    pub fn new(evaluator: T, settings: BotSettings) -> Self {
+impl<E: Evaluator> Bot<E> {
+    pub fn new(board: Board, evaluator: E, settings: BotSettings) -> Self {
         Bot {
-            queue: Vec::new(),
-            root: None,
-            pathfinder: Pathfinder::new(),
-            evaluator,
-            settings
+            data: BotData {
+                queue: Vec::new(),
+                pathfinder: Pathfinder::new(),
+                evaluator,
+                settings
+            },
+            root: Node::root(board),
         }
     }
     pub fn update_queue(&mut self, mino: Tetrimino) {
-        self.queue.push(mino);
+        self.data.queue.push(mino);
     }
     pub fn reset(&mut self, board: Board, queue: Vec<Tetrimino>) {
-        self.root = Some(Node {
-            board,
-            children: Vec::new(),
-            mv: PieceState {
-                x: 0,
-                y: 0,
-                r: 0
-            },
-            lock: HardDropResult {
-                lines_cleared: 0,
-                block_out: false
-            },
-            value: 0.0,
-            reward: 0.0,
-            max_child_reward: 0.0,
-            visits: 1,
-            uses_hold: false,
-            finished: false,
-            depth: 0
-        });
-        self.queue = queue;
+        self.root = Node::root(board);
+        self.data.queue = queue;
     }
     pub fn think(&mut self) -> bool {
-        let mut root = self.root.take().unwrap();
-        self.update_child(&mut root);
-        let finished = root.finished;
-        self.root.replace(root);
-        finished
-    }
-    fn update_child(&mut self, node: &mut Node) -> ((f64, f64), u32) {
-        let mut child_index = None;
-        let mut score = std::f64::NEG_INFINITY;
-        for (i, c) in node.children.iter().enumerate() {
-            if !c.finished {
-                use std::f64::consts::SQRT_2;
-                // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
-                //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
-                let child_score = (i as f64) / (node.children.len() as f64) +
-                    1.0 * SQRT_2 * ((node.visits as f64).ln() / (c.visits as f64)).sqrt();
-                if child_score > score {
-                    child_index = Some(i);
-                    score = child_score;
-                }
-            }
-        }
-        if let Some(child_index) = child_index {
-            let ((value, reward), visits) = self.update_child(&mut node.children[child_index]);
-            let child = node.children.remove(child_index);
-            let child_index = node.children
-                .iter()
-                .position(|c| c.value > child.value)
-                .unwrap_or(node.children.len());
-            node.children.insert(child_index, child);
-            if value + reward > node.value + node.max_child_reward {
-                node.value = value;
-                node.max_child_reward = reward;
-            }
-            node.visits += visits;
-            ((value, node.reward + reward), visits)
-        } else if node.children.is_empty() {
-            self.expand_node(node)
-        } else {
-            node.finished = true;
-            ((0.0, 0.0), 0)
-        }
-    }
-    fn expand_node(&mut self, node: &mut Node) -> ((f64, f64), u32) {
-        let child_depth = node.depth;
-        for mv in self.pathfinder.get_moves(&mut node.board) {
-            self.create_child(mv, false, child_depth, node);
-        }
-        if self.settings.use_hold {
-            let mut hold_board = node.board.clone();
-            let used = if hold_board.hold.is_none() { 1 } else { 0 };
-            hold_board.hold_piece(self.queue[child_depth as usize]);
-            if ((child_depth + used) as usize) < self.queue.len() {
-                for mv in self.pathfinder.get_moves(&mut hold_board) {
-                    self.create_child(mv, true, child_depth, node);
-                }
-            }
-        }
-        if node.children.is_empty() {
-            node.finished = true;
-            ((std::f64::NEG_INFINITY, std::f64::NEG_INFINITY), 0)
-        } else {
-            node.children.sort_unstable_by(|a, b| {
-                (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
-            });
-            let best = node.children.last().unwrap();
-            let visits = node.children.len() as u32;
-            node.value = best.value;
-            node.max_child_reward = best.reward;
-            node.visits += visits;
-            ((best.value, node.reward + best.reward), visits)
-        }
-    }
-    fn create_child(&self, mv: PieceState, uses_hold: bool, child_depth: u32, parent: &mut Node) {
-        let mut board = parent.board.clone();
-        let mut child_depth = child_depth;
-        if uses_hold {
-            let used = board.hold.is_none();
-            board.hold_piece(self.queue[child_depth as usize]);
-            if used {
-                child_depth += 1;
-            }
-        }
-        board.state = mv;
-        let lock = board.hard_drop(self.queue[child_depth as usize]);
-        child_depth += 1;
-        let mut child = Node {
-            board,
-            mv,
-            lock,
-            children: Vec::new(),
-            depth: child_depth,
-            value: 0.0,
-            reward: 0.0,
-            max_child_reward: 0.0,
-            visits: 1,
-            uses_hold,
-            finished: child_depth as usize >= self.queue.len()
-        };
-        let (value, reward) = self.evaluator.evaluate(&child, parent);
-        child.value = value;
-        child.reward = reward;
-        parent.children.push(child);
+        self.root.update(&mut self.data);
+        self.root.finished
     }
     pub fn next_move(&mut self) -> Option<&Node> {
-        self.queue.remove(0);
-        let root = self.root.take().unwrap();
-        //println!("{}", serde_json::to_string(&root).unwrap());
-        self.root = root.children.into_iter().max_by_key(|c| c.visits);
-        if self.root.is_some() {
-            Self::update_tree(self.root.as_mut().unwrap());
-        }
-        // let board = &self.root.as_ref().unwrap().board;
-        // for y in 20..40 {
-        //     for x in 0..10 {
-        //         print!("{}", if board.get_cell(x, y) == CellType::Empty {
-        //             ".."
-        //         } else {
-        //             "[]"
-        //         });
-        //     }
-        //     println!("{}", "");
-        // }
-        // println!("Hold: {:?}", board.hold);
-        self.root.as_ref()
-    }
-    fn update_tree(node: &mut Node){
-        node.finished = false;
-        node.depth -= 1;
-        for c in node.children.iter_mut() {
-            Self::update_tree(c);
+        self.data.queue.remove(0);
+        let root = self.root.children
+            .drain(..)
+            .max_by_key(|c| c.visits);
+        if let Some(root) = root {
+            self.root = root;
+            self.root.advance();
+            Some(&self.root)
+        } else {
+            None
         }
     }
 }
@@ -211,4 +81,133 @@ pub struct Node {
     pub visits: u32,
     pub finished: bool,
     pub depth: u32
+}
+
+impl Node {
+    fn root(board: Board) -> Self {
+        Self {
+            board,
+            children: Vec::new(),
+            mv: PieceState {
+                x: 0,
+                y: 0,
+                r: 0
+            },
+            lock: HardDropResult {
+                lines_cleared: 0,
+                block_out: false
+            },
+            value: 0.0,
+            reward: 0.0,
+            max_child_reward: 0.0,
+            visits: 1,
+            uses_hold: false,
+            finished: false,
+            depth: 0
+        }
+    }
+    fn update<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
+        let mut child_index = None;
+        let mut score = std::f64::NEG_INFINITY;
+        for (i, c) in self.children.iter().enumerate() {
+            if !c.finished {
+                use std::f64::consts::SQRT_2;
+                // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
+                //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
+                let child_score = (i as f64) / (self.children.len() as f64) +
+                    1.0 * SQRT_2 * ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
+                if child_score > score {
+                    child_index = Some(i);
+                    score = child_score;
+                }
+            }
+        }
+        if let Some(child_index) = child_index {
+            let ((value, reward), visits) = self.children[child_index].update(data);
+            let child = self.children.remove(child_index);
+            let child_index = self.children
+                .iter()
+                .position(|c| c.value > child.value)
+                .unwrap_or(self.children.len());
+            self.children.insert(child_index, child);
+            if value + reward > self.value + self.max_child_reward {
+                self.value = value;
+                self.max_child_reward = reward;
+            }
+            self.visits += visits;
+            ((value, self.reward + reward), visits)
+        } else if self.children.is_empty() {
+            self.expand(data)
+        } else {
+            self.finished = true;
+            ((0.0, 0.0), 0)
+        }
+    }
+    fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
+        for mv in data.pathfinder.get_moves(&mut self.board) {
+            self.create_child(data, mv, false);
+        }
+        if data.settings.use_hold {
+            let mut hold_board = self.board.clone();
+            let used = if hold_board.hold.is_none() { 1 } else { 0 };
+            hold_board.hold_piece(data.queue[self.depth as usize]);
+            if ((self.depth + used) as usize) < data.queue.len() {
+                for mv in data.pathfinder.get_moves(&mut hold_board) {
+                    self.create_child(data, mv, true);
+                }
+            }
+        }
+        if self.children.is_empty() {
+            self.finished = true;
+            ((std::f64::NEG_INFINITY, std::f64::NEG_INFINITY), 0)
+        } else {
+            self.children.sort_unstable_by(|a, b| {
+                (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
+            });
+            let best = self.children.last().unwrap();
+            let visits = self.children.len() as u32;
+            self.value = best.value;
+            self.max_child_reward = best.reward;
+            self.visits += visits;
+            ((best.value, self.reward + best.reward), visits)
+        }
+    }
+    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: PieceState, uses_hold: bool) {
+        let mut board = self.board.clone();
+        let mut child_depth = self.depth;
+        if uses_hold {
+            let used = board.hold.is_none();
+            board.hold_piece(data.queue[child_depth as usize]);
+            if used {
+                child_depth += 1;
+            }
+        }
+        board.state = mv;
+        let lock = board.hard_drop(data.queue[child_depth as usize]);
+        child_depth += 1;
+        let mut child = Node {
+            board,
+            mv,
+            lock,
+            children: Vec::new(),
+            depth: child_depth,
+            value: 0.0,
+            reward: 0.0,
+            max_child_reward: 0.0,
+            visits: 1,
+            uses_hold,
+            finished: child_depth as usize >= data.queue.len()
+        };
+        let (value, reward) = data.evaluator.evaluate(&child, self);
+        child.value = value;
+        child.reward = reward;
+        self.children.push(child);
+    }
+    fn advance(&mut self){
+        self.finished = false;
+        self.depth -= 1;
+        for c in self.children.iter_mut() {
+            c.advance();
+        }
+    }
 }
