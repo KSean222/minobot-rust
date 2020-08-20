@@ -79,6 +79,10 @@ impl Evaluator for StandardEvaluator {
         let mut value = 0.0;
         let mut reward = 0.0;
 
+        if node.lock.block_out {
+            return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
+        }
+
         let mut heights = [0; 10];
         let mut holes = 0;
         let mut hole_depths = 0;
