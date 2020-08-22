@@ -127,7 +127,7 @@ impl Node {
             let child = self.children.remove(child_index);
             let child_index = self.children
                 .iter()
-                .position(|c| c.value > child.value)
+                .position(|c| c.value + c.reward > child.value + child.reward)
                 .unwrap_or(self.children.len());
             self.children.insert(child_index, child);
             if value + reward > self.value + self.max_child_reward {
