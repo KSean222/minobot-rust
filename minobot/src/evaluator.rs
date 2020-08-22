@@ -164,11 +164,9 @@ impl Evaluator for StandardEvaluator {
         value += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
         value += filled_cells_down as f64 * self.filled_cells_down;
         value += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
-        if node.mv.y <= 35 {
-            let move_height = 39 - node.mv.y;
-            value += (move_height as f64) * self.move_height;
-            value += ((move_height * move_height) as f64) * self.move_height_sq;
-        }
+        let move_height = 39 - node.mv.y;
+        value += move_height as f64 * self.move_height;
+        value += (move_height * move_height) as f64 * self.move_height_sq;
         reward += self.line_clear[node.lock.lines_cleared as usize];
         value += (holes as f64) * self.holes;
         value += ((holes * holes) as f64) * self.holes_sq;
