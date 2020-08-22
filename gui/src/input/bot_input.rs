@@ -36,7 +36,8 @@ enum BotCommand {
 struct MoveDiagnostics {
     thinks: u32,
     mv: PieceState,
-    moves: u32
+    moves: u32,
+    visits: Vec<u32>
 }
 
 #[derive(Debug)]
@@ -95,6 +96,10 @@ impl BotController {
                             }
                             let root = &bot.root;
                             let mut board = root.board.clone();
+                            let visits = root.children
+                                .iter()
+                                .map(|n| n.visits)
+                                .collect();
                             let next_hold_piece = bot.data.queue[0];
                             let mut mv = PieceState {
                                 x: 0,
@@ -121,7 +126,8 @@ impl BotController {
                             let diagnostics = MoveDiagnostics {
                                 thinks,
                                 mv,
-                                moves
+                                moves,
+                                visits
                             };
                             if bot_tx.send(BotCommand::Move(path, uses_hold, diagnostics)).is_err() {
                                 break 'handler;
@@ -226,6 +232,7 @@ impl TetrisController for BotController {
                         println!("Move {}", diagnostics.moves);
                         println!("ms/think: {}", 100.0 / (diagnostics.thinks as f64));
                         println!("Uses hold: {}", uses_hold);
+                        println!("Visits: {:?}", diagnostics.visits);
                         println!();
                         self.thinking_time = DURATION_ZERO;
                         self.timed_out = false;
