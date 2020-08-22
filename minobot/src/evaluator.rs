@@ -40,11 +40,11 @@ impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
             holes: -100.0,
-            holes_sq: -5.0,
+            holes_sq: -7.0,
             hole_depths: -20.0,
-            hole_depths_sq: -1.0,
-            move_height: 0.0,
-            move_height_sq: -1.0,
+            hole_depths_sq: -2.0,
+            move_height: -10.0,
+            move_height_sq: -0.5,
             filled_cells_x: 0.0,
             filled_cells_x_sq: 10.0,
             filled_cells_down: 0.0,
@@ -56,19 +56,19 @@ impl Default for  StandardEvaluator {
             wells: -1.0,
             wells_sq: 0.0,
             well_depth: -0.0,
-            well_depth_sq: -0.0,
+            well_depth_sq: -5.0,
             spikes: 0.0,
             spikes_sq: 0.0,
             bumpiness: -20.0,
             bumpiness_sq: -5.0,
-            row_transitions: -1.0,
-            row_transitions_sq: 0.0,
+            row_transitions: -10.0,
+            row_transitions_sq: -0.3,
             line_clear: [
                 0.0,
-                -2000.0,
-                -1500.0,
-                -1000.0,
-                1000.0
+                -75.0,
+                -30.0,
+                -15.0,
+                500.
             ]
         }
     }
