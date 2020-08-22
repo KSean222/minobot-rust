@@ -115,7 +115,7 @@ impl Node {
                 // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
                 //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
                 let child_score = (i as f64) / (self.children.len() as f64) +
-                    1.0 * SQRT_2 * ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
+                    SQRT_2 * ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
                 if child_score > score {
                     child_index = Some(i);
                     score = child_score;
