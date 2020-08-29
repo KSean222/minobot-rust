@@ -1,6 +1,6 @@
 use serde::{ Serialize, Deserialize };
 
-use crate::pathfinder::Pathfinder;
+use crate::pathfinder::{ Pathfinder, MoveState };
 use crate::evaluator::{ Evaluator, StandardEvaluator };
 use minotetris::*;
 
@@ -70,7 +70,7 @@ impl<E: Evaluator> Bot<E> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
     pub board: Board,
-    pub mv: PieceState,
+    pub mv: MoveState,
     pub lock: HardDropResult,
     pub uses_hold: bool,
 
@@ -88,14 +88,19 @@ impl Node {
         Self {
             board,
             children: Vec::new(),
-            mv: PieceState {
-                x: 0,
-                y: 0,
-                r: 0
+            mv: MoveState {
+                piece: PieceState {
+                    x: 0,
+                    y: 0,
+                    r: 0
+                },
+                tspin: TspinType::None
             },
             lock: HardDropResult {
+                mino: Tetrimino::O,
                 lines_cleared: 0,
-                block_out: false
+                block_out: false,
+                tspin: TspinType::None
             },
             value: 0.0,
             reward: 0.0,
@@ -172,7 +177,7 @@ impl Node {
             ((best.value, self.reward + best.reward), visits)
         }
     }
-    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: PieceState, uses_hold: bool) {
+    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: MoveState, uses_hold: bool) {
         let mut board = self.board.clone();
         let mut child_depth = self.depth;
         if uses_hold {
@@ -182,7 +187,8 @@ impl Node {
                 child_depth += 1;
             }
         }
-        board.state = mv;
+        board.state = mv.piece;
+        board.tspin = mv.tspin;
         let lock = board.hard_drop(data.queue[child_depth as usize]);
         child_depth += 1;
         let mut child = Node {
@@ -198,7 +204,7 @@ impl Node {
             uses_hold,
             finished: child_depth as usize >= data.queue.len()
         };
-        let (value, reward) = data.evaluator.evaluate(&child, self);
+        let (value, reward) = data.evaluator.evaluate(&child, self, &data.queue);
         child.value = value;
         child.reward = reward;
         self.children.push(child);

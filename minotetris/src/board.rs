@@ -4,8 +4,10 @@ use serde::de::DeserializeOwned;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct HardDropResult {
+    pub mino: Tetrimino,
     pub block_out: bool,
-    pub lines_cleared: i32
+    pub lines_cleared: i32,
+    pub tspin: TspinType
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -15,7 +17,7 @@ pub struct PieceState {
     pub r: u8
 }
 
-#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum TspinType {
     None,
     Mini,
@@ -167,11 +169,15 @@ impl<T: Row> Board<T> {
             }
         }
         self.rows = new_board;
+        let mino = self.current;
+        let tspin = self.tspin;
         self.set_piece(next);
         self.held = false;
         HardDropResult {
+            mino,
             block_out: !self.piece_fits(self.state.x, self.state.y, self.state.r),
-            lines_cleared
+            lines_cleared,
+            tspin
         }
     }
     pub fn set_piece(&mut self, piece: Tetrimino){
@@ -226,7 +232,7 @@ impl<T: Row> Board<T> {
                         }
                     }
                     if corners > 2 {
-                        let front_corner_cells = match self.state.r {
+                        let front_corner_cells = match r {
                             0 => [(-1, -1), (1, -1)],
                             1 => [(1, -1), (1, 1)],
                             2 => [(-1, 1), (1, 1)],
@@ -239,7 +245,7 @@ impl<T: Row> Board<T> {
                                 front_corners += 1;
                             }
                         }
-                        self.tspin = if front_corners >= 2 || (i == 4 && (self.state.r == 0 || self.state.r == 2)) {
+                        self.tspin = if front_corners >= 2 || i == 4 {
                             TspinType::Full
                         } else {
                             TspinType::Mini

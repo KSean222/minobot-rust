@@ -4,7 +4,7 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64);
+    fn evaluate(&self, node: &Node, parent: &Node, queue: &[Tetrimino]) -> (f64, f64);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,7 +31,10 @@ pub struct StandardEvaluator {
     bumpiness_sq: f64,
     row_transitions: f64,
     row_transitions_sq: f64,
-    line_clear: [f64; 5]
+    line_clear: [f64; 5],
+    tspin_clear: [f64; 4],
+    wasted_t: f64,
+    tslot: f64
 }
 
 impl Default for  StandardEvaluator {
@@ -65,13 +68,21 @@ impl Default for  StandardEvaluator {
                 -30.0,
                 -15.0,
                 500.
-            ]
+            ],
+            tspin_clear: [
+                0.0,
+                100.0,
+                500.0,
+                1000.0
+            ],
+            wasted_t: -500.0,
+            tslot: 150.0,
         }
     }
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, parent: &Node) -> (f64, f64) {
+    fn evaluate(&self, node: &Node, parent: &Node, queue: &[Tetrimino]) -> (f64, f64) {
         let mut value = 0.0;
         let mut reward = 0.0;
 
@@ -86,6 +97,7 @@ impl Evaluator for StandardEvaluator {
         let mut max_height = 0;
         let mut wells = 0;
         let mut spikes = 0;
+        let mut tslots = 0;
         for x in 0..10 {
             let mut well_streak = 0;
             let mut spike_streak = 0;
@@ -103,6 +115,16 @@ impl Evaluator for StandardEvaluator {
                         if well_streak == 2 {
                             wells += 1;
                         }
+                    }
+                    if node.board.get_cell(x - 1, y) == CellType::Empty &&
+                        node.board.get_cell(x + 1, y) == CellType::Empty &&
+                        node.board.get_cell(x, y + 1) == CellType::Empty &&
+                        node.board.get_cell(x, y - 1) == CellType::Empty &&
+                        node.board.get_cell(x - 1, y + 1) != CellType::Empty &&
+                        node.board.get_cell(x + 1, y + 1) != CellType::Empty &&
+                        (node.board.get_cell(x - 1, y - 1) != CellType::Empty ||
+                        node.board.get_cell(x + 1, y - 1) != CellType::Empty) {
+                        tslots += 1;
                     }
                 } else {
                     if heights[x as usize] == 0 {
@@ -142,6 +164,16 @@ impl Evaluator for StandardEvaluator {
         value += bumpiness * self.bumpiness;
         value += bumpiness_sq * self.bumpiness_sq;
 
+        let mut t_pieces  = queue
+            .iter()
+            .skip(node.depth as usize)
+            .filter(|&&t| t == Tetrimino::T)
+            .count() as u32;
+        if node.board.hold == Some(Tetrimino::T) {
+            t_pieces += 1;
+        }
+        value += t_pieces.min(tslots).max(1) as f64 * self.tslot;
+
         let mut row_transitions = 0;
         for y in 20..40 {
             for x in 0..11 {
@@ -155,9 +187,9 @@ impl Evaluator for StandardEvaluator {
 
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
-        for &(x, y) in &parent.board.current.cells(node.mv.r) {
-            let cell_x = node.mv.x + x;
-            let cell_y = node.mv.y + y;
+        for &(x, y) in &node.lock.mino.cells(node.mv.piece.r) {
+            let cell_x = node.mv.piece.x + x;
+            let cell_y = node.mv.piece.y + y;
             if parent.board.get_cell(cell_x + 1, cell_y) != CellType::Empty {
                 filled_cells_x += 1;
             }
@@ -173,11 +205,34 @@ impl Evaluator for StandardEvaluator {
         value += filled_cells_down as f64 * self.filled_cells_down;
         value += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
 
-        let move_height = 39 - node.mv.y;
+        let move_height = 39 - node.mv.piece.y;
         value += move_height as f64 * self.move_height;
         value += (move_height * move_height) as f64 * self.move_height_sq;
 
-        reward += self.line_clear[node.lock.lines_cleared as usize];
+        if node.lock.mino == Tetrimino::T && (node.lock.tspin == TspinType::None || node.lock.lines_cleared == 0) {
+            reward += self.wasted_t;
+        }
+        reward += match node.lock.tspin {
+            TspinType::None => &self.line_clear[..],
+            TspinType::Mini | TspinType::Full => {
+                // for board in &[&parent.board, &node.board] {
+                //     for y in 20..40 {
+                //         for x in 0..10 {
+                //             print!("{}", if board.get_cell(x, y) == CellType::Empty {
+                //                 ".."
+                //             } else {
+                //                 "[]"
+                //             });
+                //         }
+                //         println!();
+                //     }
+                //     println!("Hold: {:?}", board.hold);
+                // }
+                // println!("Detected as {:?} {}", node.lock.tspin, node.lock.lines_cleared);
+                // panic!();
+                &self.tspin_clear[..]
+            }
+        }[node.lock.lines_cleared as usize];
 
         (value, reward)
     }

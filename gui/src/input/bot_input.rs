@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::time::Duration;
-use minobot::pathfinder::{ Pathfinder, PathfinderMove };
+use minobot::pathfinder::{ Pathfinder, PathfinderMove, MoveState };
 use minobot::bot::{ Bot, BotSettings };
 use minobot::evaluator::Evaluator;
 use std::sync::mpsc::{ self, Sender, Receiver, TryRecvError };
@@ -35,7 +35,7 @@ enum BotCommand {
 #[derive(Debug)]
 struct MoveDiagnostics {
     thinks: u32,
-    mv: PieceState,
+    mv: MoveState,
     moves: u32,
     visits: Vec<u32>
 }
@@ -101,10 +101,13 @@ impl BotController {
                                 .map(|n| n.visits)
                                 .collect();
                             let next_hold_piece = bot.data.queue[0];
-                            let mut mv = PieceState {
-                                x: 0,
-                                y: 0,
-                                r: 0
+                            let mut mv = MoveState {
+                                piece: PieceState {
+                                    x: 0,
+                                    y: 0,
+                                    r: 0
+                                },
+                                tspin: TspinType::None
                             };
                             let mut uses_hold = false;
                             let path = if let Some(node) = bot.next_move() {
@@ -114,7 +117,7 @@ impl BotController {
                                     board.hold_piece(next_hold_piece);
                                 }
                                 pathfinder.get_moves(&mut board);
-                                if let Some(path) = pathfinder.path_to(node.mv.x, node.mv.y, node.mv.r) {
+                                if let Some(path) = pathfinder.path_to(node.mv.piece.x, node.mv.piece.y, node.mv.piece.r) {
                                     path
                                 } else {
                                     VecDeque::with_capacity(0)
