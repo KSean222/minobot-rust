@@ -10,14 +10,15 @@ pub struct HardDropResult {
     pub tspin: TspinType
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PieceState {
     pub x: i32,
     pub y: i32,
-    pub r: u8
+    pub r: u8,
+    pub tspin: TspinType
 }
 
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TspinType {
     None,
     Mini,
@@ -96,8 +97,7 @@ pub struct Board<T=u16> where T: Row {
     pub current: Tetrimino,
     pub hold: Option<Tetrimino>,
     pub state: PieceState,
-    pub held: bool,
-    pub tspin: TspinType
+    pub held: bool
 }
 
 impl std::fmt::Debug for Board {
@@ -115,9 +115,9 @@ impl<T: Row> Board<T> {
             state: PieceState {
                 x: 0,
                 y: 0,
-                r: 0
+                r: 0,
+                tspin: TspinType::None
             },
-            tspin: TspinType::None,
             held: false
         };
         board.set_piece(start_piece);
@@ -131,13 +131,13 @@ impl<T: Row> Board<T> {
             false
         } else {
             self.held = true;
-            let temp = self.current;
+            let current = self.current;
             self.set_piece(if let Some(hold) = self.hold {
                 hold
             } else {
                 next
             });
-            self.hold.replace(temp);
+            self.hold.replace(current);
             true
         }
     }
@@ -155,7 +155,7 @@ impl<T: Row> Board<T> {
     }
     pub fn hard_drop(&mut self, next: Tetrimino) -> HardDropResult {
         while self.try_move(self.state.x, self.state.y + 1, self.state.r) { }
-        for (cell_x, cell_y) in &self.current.cells(self.state.r) {
+        for &(cell_x, cell_y) in &self.current.cells(self.state.r) {
             self.set_cell(self.state.x + cell_x, self.state.y + cell_y, self.current.cell());
         }
         let mut new_board = [T::default(); 40];
@@ -170,7 +170,7 @@ impl<T: Row> Board<T> {
         }
         self.rows = new_board;
         let mino = self.current;
-        let tspin = self.tspin;
+        let tspin = self.state.tspin;
         self.set_piece(next);
         self.held = false;
         HardDropResult {
@@ -182,14 +182,16 @@ impl<T: Row> Board<T> {
     }
     pub fn set_piece(&mut self, piece: Tetrimino){
         self.current = piece;
-        self.tspin = TspinType::None;
-        self.state.x = 4;
-        self.state.y = 19;
-        self.state.r = 0;
+        self.state = PieceState {
+            x: 4,
+            y: 19,
+            r: 0,
+            tspin: TspinType::None
+        };
         self.try_move(self.state.x, self.state.y + 1, self.state.r);
     }
-    pub fn piece_fits(&self, x: i32, y: i32, rot: u8) -> bool {
-        for (cell_x, cell_y) in &self.current.cells(rot) {
+    pub fn piece_fits(&self, x: i32, y: i32, r: u8) -> bool {
+        for &(cell_x, cell_y) in &self.current.cells(r) {
             if self.get_cell(x + cell_x, y + cell_y) != CellType::Empty {
                 return false;
             }
@@ -245,7 +247,7 @@ impl<T: Row> Board<T> {
                                 front_corners += 1;
                             }
                         }
-                        self.tspin = if front_corners >= 2 || i == 4 {
+                        self.state.tspin = if front_corners >= 2 || i == 4 {
                             TspinType::Full
                         } else {
                             TspinType::Mini
@@ -259,11 +261,11 @@ impl<T: Row> Board<T> {
     }
     fn try_move(&mut self, x: i32, y: i32, r: u8) -> bool {
         if self.piece_fits(x, y, r) {
-            self.tspin = TspinType::None;
             self.state = PieceState {
                 x,
                 y,
-                r
+                r,
+                tspin: TspinType::None
             };
             true
         } else {
@@ -283,8 +285,7 @@ impl Board<ColoredRow> {
             current: self.current,
             hold: self.hold,
             state: self.state,
-            held: self.held,
-            tspin: self.tspin
+            held: self.held
         }
     }
 }

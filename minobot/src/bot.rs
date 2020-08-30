@@ -1,6 +1,6 @@
 use serde::{ Serialize, Deserialize };
 
-use crate::pathfinder::{ Pathfinder, MoveState };
+use crate::pathfinder::Moves;
 use crate::evaluator::{ Evaluator, StandardEvaluator };
 use minotetris::*;
 
@@ -12,7 +12,6 @@ pub struct Bot<E=StandardEvaluator> {
 pub struct BotData<E> {
     pub queue: Vec<Tetrimino>,
     pub settings: BotSettings,
-    pathfinder: Pathfinder,
     evaluator: E,
 }
 
@@ -34,7 +33,6 @@ impl<E: Evaluator> Bot<E> {
         Bot {
             data: BotData {
                 queue: Vec::new(),
-                pathfinder: Pathfinder::new(),
                 evaluator,
                 settings
             },
@@ -70,7 +68,7 @@ impl<E: Evaluator> Bot<E> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Node {
     pub board: Board,
-    pub mv: MoveState,
+    pub mv: PieceState,
     pub lock: HardDropResult,
     pub uses_hold: bool,
 
@@ -88,12 +86,10 @@ impl Node {
         Self {
             board,
             children: Vec::new(),
-            mv: MoveState {
-                piece: PieceState {
-                    x: 0,
-                    y: 0,
-                    r: 0
-                },
+            mv: PieceState {
+                x: 0,
+                y: 0,
+                r: 0,
                 tspin: TspinType::None
             },
             lock: HardDropResult {
@@ -149,7 +145,7 @@ impl Node {
         }
     }
     fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
-        for mv in data.pathfinder.get_moves(&mut self.board) {
+        for mv in Moves::moves(self.board.clone()).moves {
             self.create_child(data, mv, false);
         }
         if data.settings.use_hold {
@@ -157,7 +153,7 @@ impl Node {
             let used = if hold_board.hold.is_none() { 1 } else { 0 };
             hold_board.hold_piece(data.queue[self.depth as usize]);
             if ((self.depth + used) as usize) < data.queue.len() {
-                for mv in data.pathfinder.get_moves(&mut hold_board) {
+                for mv in Moves::moves(hold_board).moves {
                     self.create_child(data, mv, true);
                 }
             }
@@ -177,7 +173,7 @@ impl Node {
             ((best.value, self.reward + best.reward), visits)
         }
     }
-    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: MoveState, uses_hold: bool) {
+    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: PieceState, uses_hold: bool) {
         let mut board = self.board.clone();
         let mut child_depth = self.depth;
         if uses_hold {
@@ -187,8 +183,7 @@ impl Node {
                 child_depth += 1;
             }
         }
-        board.state = mv.piece;
-        board.tspin = mv.tspin;
+        board.state = mv;
         let lock = board.hard_drop(data.queue[child_depth as usize]);
         child_depth += 1;
         let mut child = Node {

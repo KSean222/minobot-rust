@@ -187,9 +187,9 @@ impl Evaluator for StandardEvaluator {
 
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
-        for &(x, y) in &node.lock.mino.cells(node.mv.piece.r) {
-            let cell_x = node.mv.piece.x + x;
-            let cell_y = node.mv.piece.y + y;
+        for &(x, y) in &node.lock.mino.cells(node.mv.r) {
+            let cell_x = node.mv.x + x;
+            let cell_y = node.mv.y + y;
             if parent.board.get_cell(cell_x + 1, cell_y) != CellType::Empty {
                 filled_cells_x += 1;
             }
@@ -205,7 +205,7 @@ impl Evaluator for StandardEvaluator {
         value += filled_cells_down as f64 * self.filled_cells_down;
         value += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
 
-        let move_height = 39 - node.mv.piece.y;
+        let move_height = 39 - node.mv.y;
         value += move_height as f64 * self.move_height;
         value += (move_height * move_height) as f64 * self.move_height_sq;
 

@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::time::Duration;
-use minobot::pathfinder::{ Pathfinder, PathfinderMove, MoveState };
+use minobot::pathfinder::{ Moves, PathfinderMove };
 use minobot::bot::{ Bot, BotSettings };
 use minobot::evaluator::Evaluator;
 use std::sync::mpsc::{ self, Sender, Receiver, TryRecvError };
@@ -10,7 +10,7 @@ use crate::input::*;
 const DURATION_ZERO: Duration = Duration::from_millis(0);
 
 pub struct BotController {
-    queue: VecDeque<PathfinderMove>,
+    queue: Vec<PathfinderMove>,
     mino_queue_buffer: Vec<Tetrimino>,
     state: BotControllerState,
     tx: Sender<BotCommand>,
@@ -29,13 +29,13 @@ enum BotCommand {
     Think,
     NextMove,
     //rx
-    Move(VecDeque<PathfinderMove>, bool, MoveDiagnostics)
+    Move(Vec<PathfinderMove>, bool, MoveDiagnostics)
 }
 
 #[derive(Debug)]
 struct MoveDiagnostics {
     thinks: u32,
-    mv: MoveState,
+    mv: PieceState,
     moves: u32,
     visits: Vec<u32>
 }
@@ -57,7 +57,6 @@ impl BotController {
         std::thread::spawn(move || {
             let board = Board::new(Tetrimino::O);
             let mut bot = Bot::new(board, evaluator, settings);
-            let mut pathfinder = Pathfinder::new();
             let mut moves = 0;
             'handler: loop {
                 if let Ok(command) = bot_rx.recv() {
@@ -101,12 +100,10 @@ impl BotController {
                                 .map(|n| n.visits)
                                 .collect();
                             let next_hold_piece = bot.data.queue[0];
-                            let mut mv = MoveState {
-                                piece: PieceState {
-                                    x: 0,
-                                    y: 0,
-                                    r: 0
-                                },
+                            let mut mv = PieceState {
+                                x: 0,
+                                y: 0,
+                                r: 0,
                                 tspin: TspinType::None
                             };
                             let mut uses_hold = false;
@@ -116,14 +113,10 @@ impl BotController {
                                 if uses_hold {
                                     board.hold_piece(next_hold_piece);
                                 }
-                                pathfinder.get_moves(&mut board);
-                                if let Some(path) = pathfinder.path_to(node.mv.piece.x, node.mv.piece.y, node.mv.piece.r) {
-                                    path
-                                } else {
-                                    VecDeque::with_capacity(0)
-                                }
+                                let moves = Moves::moves(board);
+                                moves.path(mv)
                             } else {
-                                VecDeque::with_capacity(0)
+                                Vec::new()
                             };
                             moves += 1;
                             let diagnostics = MoveDiagnostics {
@@ -145,7 +138,7 @@ impl BotController {
             }
         });
         BotController {
-            queue: VecDeque::new(),
+            queue: Vec::new(),
             state: BotControllerState::Reset,
             mino_queue_buffer: Vec::new(),
             tx,
@@ -157,10 +150,10 @@ impl BotController {
         }
     }
     fn update_state_from_queue(&mut self) {
-        self.state = if let Some(mv) = self.queue.pop_front() {
-            BotControllerState::Move(mv)
-        } else {
+        self.state = if self.queue.is_empty() {
             BotControllerState::HardDrop
+        } else {
+            BotControllerState::Move(self.queue.remove(0))
         };
     }
 }

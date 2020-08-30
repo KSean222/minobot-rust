@@ -27,24 +27,24 @@ pub enum Tetrimino {
 }
 
 impl Tetrimino {
-    pub fn offset_table(self, rot: u8) -> &'static [(i32, i32)] {
-        let rot = rot as usize;
+    pub fn offset_table(self, r: u8) -> &'static [(i32, i32)] {
+        let r = r as usize;
         match self {
-            Self::O => &O_OFFSET_TABLE[rot],
-            Self::I => &I_OFFSET_TABLE[rot],
-            _ => &JLSTZ_OFFSET_TABLE[rot]
+            Self::O => &O_OFFSET_TABLE[r],
+            Self::I => &I_OFFSET_TABLE[r],
+            _ => &JLSTZ_OFFSET_TABLE[r]
         }
     }
-    pub fn cells(self, rot: u8) -> [(i32, i32); 4] {
-        let rot = rot as usize;
+    pub fn cells(self, r: u8) -> [(i32, i32); 4] {
+        let r = r as usize;
         match self {
-            Self::J => J_STATES[rot],
-            Self::L => L_STATES[rot],
-            Self::S => S_STATES[rot],
-            Self::T => T_STATES[rot],
-            Self::Z => Z_STATES[rot],
-            Self::I => I_STATES[rot],
-            Self::O => O_STATES[rot]
+            Self::J => J_STATES[r],
+            Self::L => L_STATES[r],
+            Self::S => S_STATES[r],
+            Self::T => T_STATES[r],
+            Self::Z => Z_STATES[r],
+            Self::I => I_STATES[r],
+            Self::O => O_STATES[r]
         }
     }
     pub fn cell(self) -> CellType {

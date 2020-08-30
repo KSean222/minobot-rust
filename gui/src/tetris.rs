@@ -50,7 +50,7 @@ impl Tetris {
             prev_inputs: EnumSet::empty(),
             settings,
             ghost_y: 0,
-            debug_ghost: PieceState { x: 0, y: 0, r: 0 },
+            debug_ghost: PieceState { x: 0, y: 0, r: 0, tspin: TspinType::None },
             debug_mino: Tetrimino::O
         };
         tetris.update_ghost_y();
