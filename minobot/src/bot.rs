@@ -54,7 +54,11 @@ impl<E: Evaluator> Bot<E> {
         self.data.queue.remove(0);
         let root = self.root.children
             .drain(..)
-            .max_by_key(|c| c.visits);
+            .max_by(|a, b| {
+                (a.value + a.reward + a.max_child_reward)
+                    .partial_cmp(&(b.value + b.reward + b.max_child_reward))
+                    .unwrap()
+            });
         if let Some(root) = root {
             self.root = root;
             self.root.advance();
