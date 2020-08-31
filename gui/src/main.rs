@@ -110,7 +110,7 @@ impl MainState {
         let mut rng = rand::thread_rng();
 
         let board = Board::<ColoredRow>::new();
-        let mut queue = PieceQueue::new(5, &mut rng);
+        let mut queue = PieceQueue::new(options.queue as usize, &mut rng);
         let piece = Piece::spawn(&board, queue.next(&mut rng));
 
         let bot = BotHandle::new(board.compress(), options.evaluator, options.settings);
