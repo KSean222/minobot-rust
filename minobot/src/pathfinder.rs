@@ -114,8 +114,8 @@ impl Moves {
     fn get_mut(&mut self, state: Piece) -> &mut Option<MoveNode> {
         &mut self.field[state.x as usize][state.y as usize][state.r as usize][state.tspin as usize]
     }
-    pub fn path(&self, state: Piece) -> Vec<PathfinderMove> {
-        let mut path = Vec::new();
+    pub fn path(&self, state: Piece) -> VecDeque<PathfinderMove> {
+        let mut path = VecDeque::new();
         let mut parent = state;
         let mut skipping = true;
         loop {
@@ -129,10 +129,9 @@ impl Moves {
                 skipping = false;
             }
             if !skipping {
-                path.push(node.mv);
+                path.push_front(node.mv);
             }
         }
-        path.reverse();
         path
     }
 }
