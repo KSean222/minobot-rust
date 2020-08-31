@@ -10,7 +10,7 @@ pub struct Bot<E=StandardEvaluator> {
 }
 
 pub struct BotData<E> {
-    pub queue: Vec<Tetrimino>,
+    pub queue: Vec<PieceType>,
     pub settings: BotSettings,
     evaluator: E,
 }
@@ -39,10 +39,10 @@ impl<E: Evaluator> Bot<E> {
             root: Node::root(board),
         }
     }
-    pub fn update_queue(&mut self, mino: Tetrimino) {
+    pub fn update_queue(&mut self, mino: PieceType) {
         self.data.queue.push(mino);
     }
-    pub fn reset(&mut self, board: Board, queue: Vec<Tetrimino>) {
+    pub fn reset(&mut self, board: Board, queue: Vec<PieceType>) {
         self.root = Node::root(board);
         self.data.queue = queue;
     }
@@ -58,6 +58,17 @@ impl<E: Evaluator> Bot<E> {
         if let Some(root) = root {
             self.root = root;
             self.root.advance();
+            // for &row in self.root.board.rows.iter().skip(20) {
+            //     for x in 0..10 {
+            //         print!("{}", if row.get(x) {
+            //             "[]"
+            //         } else {
+            //             ".."
+            //         });
+            //     }
+            //     println!()
+            // }
+            // println!("Hold: {:?}, Queue: {:?}", self.root.board.hold, self.data.queue);
             Some(&self.root)
         } else {
             None
@@ -65,11 +76,11 @@ impl<E: Evaluator> Bot<E> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Node {
     pub board: Board,
-    pub mv: PieceState,
-    pub lock: HardDropResult,
+    pub mv: Piece,
+    pub lock: LockResult,
     pub uses_hold: bool,
 
     pub children: Vec<Node>,
@@ -86,17 +97,15 @@ impl Node {
         Self {
             board,
             children: Vec::new(),
-            mv: PieceState {
+            mv: Piece {
+                kind: PieceType::O,
                 x: 0,
                 y: 0,
                 r: 0,
                 tspin: TspinType::None
             },
-            lock: HardDropResult {
-                mino: Tetrimino::O,
-                lines_cleared: 0,
-                block_out: false,
-                tspin: TspinType::None
+            lock: LockResult {
+                lines_cleared: 0
             },
             value: 0.0,
             reward: 0.0,
@@ -128,7 +137,10 @@ impl Node {
             let child = self.children.remove(child_index);
             let child_index = self.children
                 .iter()
-                .position(|c| c.value + c.reward > child.value + child.reward)
+                .position(|c| {
+                    c.value + c.reward + c.max_child_reward >
+                    child.value + child.reward + child.max_child_reward
+                })
                 .unwrap_or(self.children.len());
             self.children.insert(child_index, child);
             if value + reward > self.value + self.max_child_reward {
@@ -145,15 +157,18 @@ impl Node {
         }
     }
     fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
-        for mv in Moves::moves(self.board.clone()).moves {
+        let piece = Piece::spawn(&self.board, data.queue[self.depth as usize]);
+        for mv in Moves::moves(&self.board, piece).moves {
             self.create_child(data, mv, false);
         }
         if data.settings.use_hold {
             let mut hold_board = self.board.clone();
-            let used = if hold_board.hold.is_none() { 1 } else { 0 };
-            hold_board.hold_piece(data.queue[self.depth as usize]);
-            if ((self.depth + used) as usize) < data.queue.len() {
-                for mv in Moves::moves(hold_board).moves {
+            let piece_type = hold_board.hold
+                .replace(data.queue[self.depth as usize])
+                .or(data.queue.get((self.depth + 1) as usize).copied());
+            if let Some(piece_type) = piece_type {
+                let piece = Piece::spawn(&self.board, piece_type);
+                for mv in Moves::moves(&hold_board, piece).moves {
                     self.create_child(data, mv, true);
                 }
             }
@@ -173,18 +188,15 @@ impl Node {
             ((best.value, self.reward + best.reward), visits)
         }
     }
-    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: PieceState, uses_hold: bool) {
+    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: Piece, uses_hold: bool) {
         let mut board = self.board.clone();
         let mut child_depth = self.depth;
         if uses_hold {
-            let used = board.hold.is_none();
-            board.hold_piece(data.queue[child_depth as usize]);
-            if used {
+            if board.hold.replace(data.queue[child_depth as usize]).is_none() {
                 child_depth += 1;
             }
         }
-        board.state = mv;
-        let lock = board.hard_drop(data.queue[child_depth as usize]);
+        let lock = board.lock_piece(mv);
         child_depth += 1;
         let mut child = Node {
             board,

@@ -7,15 +7,15 @@ use enumset::EnumSet;
 use arrayvec::ArrayVec;
 
 pub trait PieceQueue {
-    fn take(&mut self) -> Tetrimino;
-    fn get(&self, index: i32) -> Tetrimino;
+    fn take(&mut self) -> PieceType;
+    fn get(&self, index: i32) -> PieceType;
     fn max_previews(&self) -> i32;
 }
 
 pub struct RandomPieceQueue {
     rng: Pcg32,
-    bag: EnumSet<Tetrimino>,
-    queue: VecDeque<Tetrimino>,
+    bag: EnumSet<PieceType>,
+    queue: VecDeque<PieceType>,
     previews: i32
 }
 
@@ -36,7 +36,7 @@ impl RandomPieceQueue {
         if self.bag.is_empty() {
             self.bag = EnumSet::all();
         }
-        let bag: ArrayVec<[Tetrimino; 7]> = self.bag.iter().collect();
+        let bag: ArrayVec<[PieceType; 7]> = self.bag.iter().collect();
         let mino = bag[self.rng.gen_range(0, bag.len())];
         self.bag.remove(mino);
         self.queue.push_back(mino);
@@ -44,12 +44,12 @@ impl RandomPieceQueue {
 }
 
 impl PieceQueue for RandomPieceQueue {
-    fn take(&mut self) -> Tetrimino {
+    fn take(&mut self) -> PieceType {
         let piece = self.queue.pop_front().unwrap();
         self.add_piece();
         piece
     }
-    fn get(&self, index: i32) -> Tetrimino {
+    fn get(&self, index: i32) -> PieceType {
         *self.queue.get(index as usize).unwrap()
     }
     fn max_previews(&self) -> i32 {

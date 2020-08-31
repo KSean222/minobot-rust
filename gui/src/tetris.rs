@@ -7,6 +7,8 @@ use ggez::GameResult;
 pub struct Tetris {
     pub queue: RandomPieceQueue,
     pub board: Board<ColoredRow>,
+    pub piece: Piece,
+    held: bool,
     cell_size: f32,
     arr_timer: Duration,
     das_timer: Duration,
@@ -14,8 +16,7 @@ pub struct Tetris {
     prev_inputs: EnumSet<TetrisInput>,
     settings: TetrisSettings,
     ghost_y: i32,
-    pub debug_ghost: PieceState,
-    pub debug_mino: Tetrimino
+    pub debug_ghost: Piece
 }
 
 pub struct TetrisSettings {
@@ -40,8 +41,11 @@ const DURATION_ZERO: Duration = Duration::from_millis(0);
 impl Tetris {
     pub fn new(settings: TetrisSettings) -> Tetris {
         let mut queue = RandomPieceQueue::new([1u8; 16], 5);
+        let board = Board::new();
         let mut tetris = Tetris {
-            board: Board::<ColoredRow>::new(queue.take()),
+            piece: Piece::spawn(&board, queue.take()),
+            board,
+            held: false,
             queue,
             cell_size: 32.0,
             das_timer: DURATION_ZERO,
@@ -50,37 +54,36 @@ impl Tetris {
             prev_inputs: EnumSet::empty(),
             settings,
             ghost_y: 0,
-            debug_ghost: PieceState { x: 0, y: 0, r: 0, tspin: TspinType::None },
-            debug_mino: Tetrimino::O
+            debug_ghost: Piece {
+                kind: PieceType::O,
+                x: 0,
+                y: 0,
+                r: 0,
+                tspin: TspinType::None
+            },
         };
         tetris.update_ghost_y();
         tetris
     }
     fn update_ghost_y(&mut self) {
-        let orig_y = self.board.state.y;
-        while self.board.soft_drop() { }
-        self.ghost_y = self.board.state.y;
-        self.board.state.y = orig_y;
+        let mut piece = self.piece;
+        while piece.soft_drop(&self.board) { }
+        self.ghost_y = piece.y;
     }
-    fn take_mino(&mut self, events: &mut Vec<TetrisEvent>) -> Tetrimino {
+    fn take_mino(&mut self, events: &mut Vec<TetrisEvent>) -> PieceType {
         let mino = self.queue.take();
         events.push(TetrisEvent::PieceQueued(self.queue.get(self.queue.max_previews() - 1)));
         mino
     }
     pub fn update(&mut self, delta: Duration, inputs: EnumSet<TetrisInput>) -> Vec<TetrisEvent> {
         let mut events = Vec::new();
-        let orig_state = self.board.state;
-        let mut update_ghost = false;
-        if inputs.contains(TetrisInput::Hold) {
-            if self.board.hold.is_none() {
-                let mino = self.take_mino(&mut events);
-                self.board.hold_piece(mino);
-                events.push(TetrisEvent::PieceHeld);
-                update_ghost = true;
-            } else if self.board.hold_piece(self.queue.get(0)) {
-                events.push(TetrisEvent::PieceHeld);
-                update_ghost = true;
-            }
+        let orig_state = self.piece;
+        if inputs.contains(TetrisInput::Hold) && !self.held {
+            let piece_type = self.board.hold
+                .replace(self.piece.kind)
+                .unwrap_or_else(|| self.take_mino(&mut events));
+            self.piece = Piece::spawn(&self.board, piece_type);
+            events.push(TetrisEvent::PieceHeld);
         }
         if inputs.contains(TetrisInput::Left) != inputs.contains(TetrisInput::Right) {
             if inputs.contains(TetrisInput::Left) != self.prev_inputs.contains(TetrisInput::Left) ||
@@ -90,9 +93,9 @@ impl Tetris {
             }
             if self.das_timer == DURATION_ZERO {
                 if inputs.contains(TetrisInput::Left) {
-                    self.board.move_left();
+                    self.piece.move_left(&self.board);
                 } else {
-                    self.board.move_right();
+                    self.piece.move_right(&self.board);
                 }
             }
             if self.das_timer < self.settings.das {
@@ -104,9 +107,9 @@ impl Tetris {
                 }
                 if self.arr_timer == DURATION_ZERO {
                     if inputs.contains(TetrisInput::Left) {
-                        self.board.move_left();
+                        self.piece.move_left(&self.board);
                     } else {
-                        self.board.move_right();
+                        self.piece.move_right(&self.board);
                     }
                 }
                 self.arr_timer += delta;
@@ -115,11 +118,11 @@ impl Tetris {
         if inputs.contains(TetrisInput::RotLeft) != inputs.contains(TetrisInput::RotRight) {
             if inputs.contains(TetrisInput::RotLeft) {
                 if !self.prev_inputs.contains(TetrisInput::RotLeft) {
-                    self.board.turn_left();
+                    self.piece.turn_left(&self.board);
                 }
             } else {
                 if !self.prev_inputs.contains(TetrisInput::RotRight) {
-                    self.board.turn_right();
+                    self.piece.turn_right(&self.board);
                 }
             }
         }
@@ -128,22 +131,23 @@ impl Tetris {
                 self.sdd_timer = DURATION_ZERO;
             }
             if self.sdd_timer == DURATION_ZERO {
-                self.board.soft_drop();
+                self.piece.soft_drop(&self.board);
             }
             self.sdd_timer += delta;
         }
         if inputs.contains(TetrisInput::HardDrop) && !self.prev_inputs.contains(TetrisInput::HardDrop) {
-            let mino = self.take_mino(&mut events);
-            let result = self.board.hard_drop(mino);
+            while self.piece.soft_drop(&self.board) {}
+            let result = self.board.lock_piece(self.piece);
+            let piece = self.take_mino(&mut events);
+            self.piece = Piece::spawn(&self.board, piece);
             events.push(TetrisEvent::PieceLocked(result));
-            update_ghost = true;
         }
-        if self.board.state.x != orig_state.x || self.board.state.r != orig_state.r || update_ghost {
+        if self.piece.x != orig_state.x || self.piece.r != orig_state.r || self.piece.kind != orig_state.kind {
             self.update_ghost_y();
         }
-        if self.board.state != orig_state {
+        if self.piece != orig_state {
             events.push(TetrisEvent::PieceMove(orig_state));
-            if self.board.state.y == self.ghost_y {
+            if self.piece.y == self.ghost_y {
                 events.push(TetrisEvent::StackTouched);
             }
         }
@@ -154,24 +158,24 @@ impl Tetris {
         res.skin.clear();
         for x in 0..10 {
             for y in 20..40 {
-                let cell = self.board.get_cell(x, y);
+                let cell = self.board.rows[y as usize].cell_type(x as usize);
                 self.draw_cell(res, x + 5, y - 20, cell, false);
             }
         }
         self.draw_tetrimino(
             res,
-            self.board.state.x + 5,
+            self.piece.x + 5,
             self.ghost_y - 20,
-            self.board.state.r,
-            self.board.current,
+            self.piece.r,
+            self.piece.kind,
             true
         );
         self.draw_tetrimino(
             res,
-            self.board.state.x + 5,
-            self.board.state.y - 20,
-            self.board.state.r,
-            self.board.current,
+            self.piece.x + 5,
+            self.piece.y - 20,
+            self.piece.r,
+            self.piece.kind,
             false
         );
         self.draw_tetrimino(
@@ -179,7 +183,7 @@ impl Tetris {
             self.debug_ghost.x + 5,
             self.debug_ghost.y - 20,
             self.debug_ghost.r,
-            self.debug_mino,
+            self.debug_ghost.kind,
             true
         );
         if let Some(mino) = self.board.hold {
@@ -198,7 +202,7 @@ impl Tetris {
             ]);
         res.skin.add(param);
     }
-    fn draw_tetrimino(&mut self, res: &mut Resources, x: i32, y: i32, r: u8, mino: Tetrimino, ghost: bool) {
+    fn draw_tetrimino(&mut self, res: &mut Resources, x: i32, y: i32, r: u8, mino: PieceType, ghost: bool) {
         let cell = mino.cell();
         for (cell_x, cell_y) in &mino.cells(r) {
             self.draw_cell(res, cell_x + x, cell_y + y, cell, ghost);
@@ -208,9 +212,9 @@ impl Tetris {
 
 #[derive(Debug)]
 pub enum TetrisEvent {
-    PieceMove(PieceState),
+    PieceMove(Piece),
     StackTouched,
-    PieceLocked(HardDropResult),
+    PieceLocked(LockResult),
     PieceHeld,
-    PieceQueued(Tetrimino)
+    PieceQueued(PieceType)
 }

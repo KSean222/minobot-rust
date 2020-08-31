@@ -26,45 +26,45 @@ const O_MOVES: &[PathfinderMove] = &[
 
 pub struct Moves {
     field: [[[[Option<MoveNode>; 3]; 4]; 40]; 10],
-    pub moves: Vec<PieceState>
+    pub moves: Vec<Piece>
 }
 
 impl Moves {
-    pub fn moves(board: Board) -> Self {
+    pub fn moves(board: &Board, piece: Piece) -> Self {
         let mut moves = Self {
             field: [[[[None; 3]; 4]; 40]; 10],
             moves: Vec::new(),
         };
-        moves.init_moves(board);
+        moves.init_moves(board, piece);
         moves
     }
-    fn init_moves(&mut self, mut board: Board) {
-        let mut locks = HashMap::new();
-        let mut queue = VecDeque::new();
-        *self.get_mut(board.state) = Some(MoveNode {
+    fn init_moves(&mut self, board: &Board, piece: Piece) {
+        let mut locks = HashMap::with_capacity(1024);
+        let mut queue = VecDeque::with_capacity(1024);
+        *self.get_mut(piece) = Some(MoveNode {
             parent: None,
             mv: PathfinderMove::SonicDrop,
             total_dist: 0,
             dist: 0
         });
-        queue.push_back(board.state);
+        queue.push_back(piece);
         while let Some(parent) = queue.pop_front() {
-            let moves = if board.current == Tetrimino::O {
+            let moves = if piece.kind == PieceType::O {
                 O_MOVES
             } else {
                 MOVES
             };
             for &mv in moves {
-                board.state = parent;
+                let mut child = parent;
                 
                 let success = match mv {
-                    PathfinderMove::Left => board.move_left(),
-                    PathfinderMove::Right => board.move_right(),
-                    PathfinderMove::RotLeft => board.turn_left(),
-                    PathfinderMove::RotRight => board.turn_right(),
+                    PathfinderMove::Left => child.move_left(board),
+                    PathfinderMove::Right => child.move_right(board),
+                    PathfinderMove::RotLeft => child.turn_left(board),
+                    PathfinderMove::RotRight => child.turn_right(board),
                     PathfinderMove::SonicDrop => {
                         let mut success = false;
-                        while board.soft_drop() {
+                        while child.soft_drop(board) {
                             success = true;
                         }
                         success
@@ -72,7 +72,7 @@ impl Moves {
                 };
                 if success {
                     let dist = if mv == PathfinderMove::SonicDrop {
-                        board.state.y - parent.y
+                        child.y - parent.y
                     } else {
                         1
                     };
@@ -83,42 +83,38 @@ impl Moves {
                         dist,
                         total_dist: parent_dist + dist
                     };
-                    let entry = self.get_mut(board.state);
+                    let entry = self.get_mut(child);
                     if entry.is_none() || node.true_dist() < entry.as_ref().unwrap().true_dist() {
                         *entry = Some(node);
-                        queue.push_back(board.state);
+                        queue.push_back(child);
                     }
                 }
                 if mv == PathfinderMove::SonicDrop {
                     let mut key = [(0, 0); 4];
-                    let cells = board.current.cells(board.state.r);
-                    let cells = cells
-                        .iter()
-                        .map(|&(x, y)| (board.state.x + x, board.state.y + y));
-                    for (dest, src) in key.iter_mut().zip(cells) {
+                    for (dest, &src) in key.iter_mut().zip(child.cells().iter()) {
                         *dest = src;
                     }
                     locks.entry(key)
                         .and_modify(|prev| {
                             let prev_dist = self.get(*prev).unwrap().true_dist();
-                            let new_dist = self.get(board.state).unwrap().true_dist();
+                            let new_dist = self.get(child).unwrap().true_dist();
                             if new_dist < prev_dist {
-                                *prev = board.state;
+                                *prev = child;
                             }
                         })
-                        .or_insert(board.state);
+                        .or_insert(child);
                 }
             }
         }
         self.moves = locks.values().copied().collect();
     }
-    fn get(&self, state: PieceState) -> &Option<MoveNode> {
+    fn get(&self, state: Piece) -> &Option<MoveNode> {
         &self.field[state.x as usize][state.y as usize][state.r as usize][state.tspin as usize]
     }
-    fn get_mut(&mut self, state: PieceState) -> &mut Option<MoveNode> {
+    fn get_mut(&mut self, state: Piece) -> &mut Option<MoveNode> {
         &mut self.field[state.x as usize][state.y as usize][state.r as usize][state.tspin as usize]
     }
-    pub fn path(&self, state: PieceState) -> Vec<PathfinderMove> {
+    pub fn path(&self, state: Piece) -> Vec<PathfinderMove> {
         let mut path = Vec::new();
         let mut parent = state;
         let mut skipping = true;
@@ -143,7 +139,7 @@ impl Moves {
 
 #[derive(Copy, Clone)]
 pub struct MoveNode {
-    pub parent: Option<PieceState>,
+    pub parent: Option<Piece>,
     pub mv: PathfinderMove,
     pub total_dist: i32,
     pub dist: i32

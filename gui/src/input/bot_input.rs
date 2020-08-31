@@ -11,10 +11,10 @@ const DURATION_ZERO: Duration = Duration::from_millis(0);
 
 pub struct BotController {
     queue: Vec<PathfinderMove>,
-    mino_queue_buffer: Vec<Tetrimino>,
+    mino_queue_buffer: Vec<PieceType>,
     state: BotControllerState,
     tx: Sender<BotCommand>,
-    rx: Receiver<BotCommand>,
+    rx: Receiver<BotResult>,
     inputs: EnumSet<TetrisInput>,
     send_inputs: bool,
     thinking_time: Duration,
@@ -23,19 +23,21 @@ pub struct BotController {
 
 #[derive(Debug)]
 enum BotCommand {
-    //tx
-    Update(Vec<Tetrimino>),
-    Reset(Board, Vec<Tetrimino>),
+    Update(Vec<PieceType>),
+    Reset(Board, Vec<PieceType>),
     Think,
     NextMove,
-    //rx
+}
+
+#[derive(Debug)]
+enum BotResult {
     Move(Vec<PathfinderMove>, bool, MoveDiagnostics)
 }
 
 #[derive(Debug)]
 struct MoveDiagnostics {
     thinks: u32,
-    mv: PieceState,
+    mv: Piece,
     moves: u32,
     visits: Vec<u32>
 }
@@ -55,7 +57,7 @@ impl BotController {
         let (tx, bot_rx) = mpsc::channel();
         let (bot_tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let board = Board::new(Tetrimino::O);
+            let board = Board::new();
             let mut bot = Bot::new(board, evaluator, settings);
             let mut moves = 0;
             'handler: loop {
@@ -94,13 +96,13 @@ impl BotController {
                                 }
                             }
                             let root = &bot.root;
-                            let mut board = root.board.clone();
+                            let board = root.board.clone();
                             let visits = root.children
                                 .iter()
                                 .map(|n| n.visits)
                                 .collect();
-                            let next_hold_piece = bot.data.queue[0];
-                            let mut mv = PieceState {
+                            let mut mv = Piece {
+                                kind: PieceType::O,
                                 x: 0,
                                 y: 0,
                                 r: 0,
@@ -110,11 +112,7 @@ impl BotController {
                             let path = if let Some(node) = bot.next_move() {
                                 mv = node.mv;
                                 uses_hold = node.uses_hold;
-                                if uses_hold {
-                                    board.hold_piece(next_hold_piece);
-                                }
-                                let moves = Moves::moves(board);
-                                moves.path(mv)
+                                Moves::moves(&board, Piece::spawn(&board, mv.kind)).path(mv)
                             } else {
                                 Vec::new()
                             };
@@ -125,13 +123,11 @@ impl BotController {
                                 moves,
                                 visits
                             };
-                            if bot_tx.send(BotCommand::Move(path, uses_hold, diagnostics)).is_err() {
+                            if bot_tx.send(BotResult::Move(path, uses_hold, diagnostics)).is_err() {
                                 break 'handler;
                             }
                         },
-                        BotCommand::NextMove => unreachable!("Received NextMove command while not thinking"),
-                        BotCommand::Move(_, _, _) => unreachable!("Received Move command (That's my job!)")
-                    }
+                        BotCommand::NextMove => unreachable!("Received NextMove command while not thinking")                    }
                 } else {
                     break 'handler;
                 }
@@ -174,7 +170,7 @@ impl TetrisController for BotController {
                 for event in events {
                     match event {
                         TetrisEvent::PieceMove(prev) => {
-                            if tetris.board.state.x != prev.x || tetris.board.state.r != prev.r  {
+                            if tetris.piece.x != prev.x || tetris.piece.r != prev.r  {
                                 finished = true;
                             }
                         },
@@ -205,7 +201,8 @@ impl TetrisController for BotController {
                 }
             },
             BotControllerState::Reset => {
-                let mut pieces = Vec::with_capacity(tetris.queue.max_previews() as usize);
+                let mut pieces = Vec::with_capacity(tetris.queue.max_previews() as usize + 1);
+                pieces.push(tetris.piece.kind);
                 for i in 0..tetris.queue.max_previews() {
                     pieces.push(tetris.queue.get(i));
                 }
@@ -224,7 +221,7 @@ impl TetrisController for BotController {
                     self.thinking_time += ggez::timer::delta(ctx);
                 }
                 if let Ok(command) = self.rx.try_recv() {
-                    if let BotCommand::Move(path, uses_hold, diagnostics) = command {
+                    if let BotResult::Move(path, uses_hold, diagnostics) = command {
                         println!("Move {}", diagnostics.moves);
                         println!("ms/think: {}", 100.0 / (diagnostics.thinks as f64));
                         println!("Uses hold: {}", uses_hold);

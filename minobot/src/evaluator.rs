@@ -4,7 +4,7 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, parent: &Node, queue: &[Tetrimino]) -> (f64, f64);
+    fn evaluate(&self, node: &Node, parent: &Node, queue: &[PieceType]) -> (f64, f64);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,13 +82,13 @@ impl Default for  StandardEvaluator {
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, parent: &Node, queue: &[Tetrimino]) -> (f64, f64) {
+    fn evaluate(&self, node: &Node, parent: &Node, queue: &[PieceType]) -> (f64, f64) {
         let mut value = 0.0;
         let mut reward = 0.0;
 
-        if node.lock.block_out {
-            return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
-        }
+        // if node.lock.block_out {
+        //     return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
+        // }
 
         let mut heights = [0; 10];
         let mut holes = 0;
@@ -103,27 +103,27 @@ impl Evaluator for StandardEvaluator {
             let mut spike_streak = 0;
             for y in 20..40 {
                 let height = 39 - y;
-                if node.board.get_cell(x, y) == CellType::Empty {
+                if !node.board.occupied(x, y) {
                     if height < heights[x as usize] {
                         let depth = heights[x as usize] - height;
                         holes += 1;
                         hole_depths += depth;
                         hole_depths_sq += depth * depth;
                     }
-                    if node.board.get_cell(x - 1, y) != CellType::Empty && node.board.get_cell(x + 1, y) != CellType::Empty {
+                    if node.board.occupied(x - 1, y) && node.board.occupied(x + 1, y) {
                         well_streak += 1;
                         if well_streak == 2 {
                             wells += 1;
                         }
                     }
-                    if node.board.get_cell(x - 1, y) == CellType::Empty &&
-                        node.board.get_cell(x + 1, y) == CellType::Empty &&
-                        node.board.get_cell(x, y + 1) == CellType::Empty &&
-                        node.board.get_cell(x, y - 1) == CellType::Empty &&
-                        node.board.get_cell(x - 1, y + 1) != CellType::Empty &&
-                        node.board.get_cell(x + 1, y + 1) != CellType::Empty &&
-                        (node.board.get_cell(x - 1, y - 1) != CellType::Empty ||
-                        node.board.get_cell(x + 1, y - 1) != CellType::Empty) {
+                    if  !node.board.occupied(x - 1, y) &&
+                        !node.board.occupied(x + 1, y) &&
+                        !node.board.occupied(x, y + 1) &&
+                        !node.board.occupied(x, y - 1) &&
+                        node.board.occupied(x - 1, y + 1) &&
+                        node.board.occupied(x + 1, y + 1) &&
+                        (node.board.occupied(x - 1, y - 1) ||
+                        node.board.occupied(x + 1, y - 1)) {
                         tslots += 1;
                     }
                 } else {
@@ -131,7 +131,7 @@ impl Evaluator for StandardEvaluator {
                         heights[x as usize] = height;
                         max_height = max_height.max(height);
                     }
-                    if node.board.get_cell(x - 1, y) == CellType::Empty && node.board.get_cell(x + 1, y) == CellType::Empty {
+                    if !node.board.occupied(x - 1, y) && !node.board.occupied(x + 1, y) {
                         spike_streak += 1;
                         if spike_streak == 2 {
                             spikes += 1;
@@ -167,9 +167,9 @@ impl Evaluator for StandardEvaluator {
         let mut t_pieces  = queue
             .iter()
             .skip(node.depth as usize)
-            .filter(|&&t| t == Tetrimino::T)
+            .filter(|&&t| t == PieceType::T)
             .count() as u32;
-        if node.board.hold == Some(Tetrimino::T) {
+        if node.board.hold == Some(PieceType::T) {
             t_pieces += 1;
         }
         value += t_pieces.min(tslots).max(1) as f64 * self.tslot;
@@ -177,7 +177,7 @@ impl Evaluator for StandardEvaluator {
         let mut row_transitions = 0;
         for y in 20..40 {
             for x in 0..11 {
-                if node.board.get_cell(x - 1, y) != node.board.get_cell(x, y) {
+                if node.board.occupied(x - 1, y) != node.board.occupied(x, y) {
                     row_transitions += 1;
                 }
             }
@@ -187,16 +187,14 @@ impl Evaluator for StandardEvaluator {
 
         let mut filled_cells_x = 0;
         let mut filled_cells_down = 0;
-        for &(x, y) in &node.lock.mino.cells(node.mv.r) {
-            let cell_x = node.mv.x + x;
-            let cell_y = node.mv.y + y;
-            if parent.board.get_cell(cell_x + 1, cell_y) != CellType::Empty {
+        for &(x, y) in &node.mv.cells() {
+            if parent.board.occupied(x + 1, y) {
                 filled_cells_x += 1;
             }
-            if parent.board.get_cell(cell_x - 1, cell_y) != CellType::Empty {
+            if parent.board.occupied(x - 1, y) {
                 filled_cells_x += 1;
             }
-            if parent.board.get_cell(cell_x, cell_y + 1) != CellType::Empty {
+            if parent.board.occupied(x, y + 1) {
                 filled_cells_down += 1;
             }
         }
@@ -209,10 +207,10 @@ impl Evaluator for StandardEvaluator {
         value += move_height as f64 * self.move_height;
         value += (move_height * move_height) as f64 * self.move_height_sq;
 
-        if node.lock.mino == Tetrimino::T && (node.lock.tspin == TspinType::None || node.lock.lines_cleared == 0) {
+        if node.mv.kind == PieceType::T && (node.mv.tspin == TspinType::None || node.lock.lines_cleared == 0) {
             reward += self.wasted_t;
         }
-        reward += match node.lock.tspin {
+        reward += match node.mv.tspin {
             TspinType::None => &self.line_clear[..],
             TspinType::Mini | TspinType::Full => {
                 // for board in &[&parent.board, &node.board] {
