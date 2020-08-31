@@ -107,7 +107,7 @@ impl Node {
             lock: LockResult {
                 lines_cleared: 0
             },
-            value: 0.0,
+            value: std::f64::NEG_INFINITY,
             reward: 0.0,
             max_child_reward: 0.0,
             visits: 1,
@@ -153,7 +153,7 @@ impl Node {
             self.expand(data)
         } else {
             self.finished = true;
-            ((0.0, 0.0), 0)
+            ((std::f64::NEG_INFINITY, 0.0), 0)
         }
     }
     fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
@@ -175,7 +175,7 @@ impl Node {
         }
         if self.children.is_empty() {
             self.finished = true;
-            ((std::f64::NEG_INFINITY, std::f64::NEG_INFINITY), 0)
+            ((std::f64::NEG_INFINITY, 0.0), 0)
         } else {
             self.children.sort_unstable_by(|a, b| {
                 (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
