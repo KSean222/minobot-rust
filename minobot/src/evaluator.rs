@@ -70,22 +70,19 @@ impl Evaluator for StandardEvaluator {
         //     return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
         // }
 
-        let mut heights = [0; 10];
         let mut holes = 0;
         let mut hole_depths = 0;
         let mut hole_depths_sq = 0;
-        let mut max_height = 0;
         let mut tslots = 0;
         for x in 0..10 {
-            for y in 20..40 {
-                let height = 39 - y;
+            let column_height = node.board.column_heights[x as usize] as i32;
+            for y in (40 - column_height as i32)..40 {
+                let height = 40 - y;
                 if !node.board.occupied(x, y) {
-                    if height < heights[x as usize] {
-                        let depth = heights[x as usize] - height;
-                        holes += 1;
-                        hole_depths += depth;
-                        hole_depths_sq += depth * depth;
-                    }
+                    let depth = column_height - height;
+                    holes += 1;
+                    hole_depths += depth;
+                    hole_depths_sq += depth * depth;
                     if  !node.board.occupied(x - 1, y) &&
                         !node.board.occupied(x + 1, y) &&
                         !node.board.occupied(x, y + 1) &&
@@ -96,14 +93,10 @@ impl Evaluator for StandardEvaluator {
                         node.board.occupied(x + 1, y - 1)) {
                         tslots += 1;
                     }
-                } else {
-                    if heights[x as usize] == 0 {
-                        heights[x as usize] = height;
-                        max_height = max_height.max(height);
-                    }
                 }
             }
         }
+        let max_height = node.board.column_heights.iter().copied().max().unwrap();
         value += holes as f64 * self.holes;
         value += (holes * holes) as f64 * self.holes_sq;
         value += hole_depths as f64 * self.hole_depths;
@@ -113,7 +106,7 @@ impl Evaluator for StandardEvaluator {
 
         let mut bumpiness = 0.0;
         let mut bumpiness_sq = 0.0;
-        for (&h1, &h2) in heights.iter().zip(heights.iter().skip(1)) {
+        for (&h1, &h2) in node.board.column_heights.iter().zip(node.board.column_heights.iter().skip(1)) {
             let diff = (h1 - h2).abs() as f64;
             bumpiness += diff;
             bumpiness_sq += diff * diff;

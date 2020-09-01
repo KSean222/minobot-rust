@@ -3,7 +3,7 @@ use arrayvec::ArrayVec;
 
 #[derive(Copy, Clone, Debug)]
 pub struct LockResult {
-    pub lines_cleared: u32
+    pub lines_cleared: i32
 }
 
 pub trait Row: Copy + Default {
@@ -79,6 +79,7 @@ impl Default for ColoredRow {
 #[derive(Debug, Clone)]
 pub struct Board<R=u16> {
     pub rows: ArrayVec<[R; 40]>,
+    pub column_heights: [i32; 10],
     pub hold: Option<PieceType>
 }
 
@@ -86,6 +87,7 @@ impl<R: Row> Board<R> {
     pub fn new() -> Self {
         Self {
             rows: [R::default(); 40].into(),
+            column_heights: [0; 10],
             hold: None
         }
     }
@@ -94,16 +96,24 @@ impl<R: Row> Board<R> {
     }
     pub fn lock_piece(&mut self, piece: Piece) -> LockResult {
         for &(x, y) in &piece.cells() {
-            self.rows[y as usize].set(x as usize, piece.kind.cell())
+            self.rows[y as usize].set(x as usize, piece.kind.cell());
+            self.column_heights[x as usize] = self.column_heights[x as usize].max(40 - y);
         }
         
-        let lines_cleared = self.rows.iter().filter(|row| row.filled()).count() as u32;
+        let lines_cleared = self.rows.iter().filter(|row| row.filled()).count() as i32;
         let new = (0..lines_cleared)
             .map(|_| R::default())
             .chain(self.rows.iter().copied().filter(|row| !row.filled()))
             .collect();
         self.rows = new;
 
+        for x in 0..10 {
+            self.column_heights[x] -= lines_cleared;
+            while self.column_heights[x] > 0 &&
+                !self.occupied(x as i32, 40 - self.column_heights[x] as i32) {
+                self.column_heights[x] -= 1;
+            }
+        }
         
         LockResult {
             lines_cleared,
@@ -121,6 +131,7 @@ impl Board<ColoredRow> {
     pub fn compress(&self) -> Board {
         Board {
             rows: self.rows.iter().map(|row| row.compress()).collect(),
+            column_heights: self.column_heights.clone(),
             hold: self.hold
         }
     }
