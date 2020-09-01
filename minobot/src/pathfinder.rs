@@ -31,17 +31,13 @@ pub struct Moves {
 
 impl Moves {
     pub fn moves(board: &Board, piece: Piece) -> Self {
-        let mut moves = Self {
+        let mut this = Self {
             field: [[[[None; 3]; 4]; 40]; 10],
             moves: Vec::new(),
         };
-        moves.init_moves(board, piece);
-        moves
-    }
-    fn init_moves(&mut self, board: &Board, piece: Piece) {
         let mut locks = HashMap::with_capacity(1024);
         let mut queue = VecDeque::with_capacity(1024);
-        *self.get_mut(piece) = Some(MoveNode {
+        *this.get_mut(piece) = Some(MoveNode {
             parent: None,
             mv: PathfinderMove::SonicDrop,
             total_dist: 0,
@@ -76,14 +72,14 @@ impl Moves {
                     } else {
                         1
                     };
-                    let parent_dist = self.get(parent).unwrap().total_dist;
+                    let parent_dist = this.get(parent).unwrap().total_dist;
                     let node = MoveNode {
                         parent: Some(parent),
                         mv,
                         dist,
                         total_dist: parent_dist + dist
                     };
-                    let entry = self.get_mut(child);
+                    let entry = this.get_mut(child);
                     if entry.is_none() || node.true_dist() < entry.as_ref().unwrap().true_dist() {
                         *entry = Some(node);
                         queue.push_back(child);
@@ -96,8 +92,8 @@ impl Moves {
                     }
                     locks.entry(key)
                         .and_modify(|prev| {
-                            let prev_dist = self.get(*prev).unwrap().true_dist();
-                            let new_dist = self.get(child).unwrap().true_dist();
+                            let prev_dist = this.get(*prev).unwrap().true_dist();
+                            let new_dist = this.get(child).unwrap().true_dist();
                             if new_dist < prev_dist {
                                 *prev = child;
                             }
@@ -106,7 +102,8 @@ impl Moves {
                 }
             }
         }
-        self.moves = locks.values().copied().collect();
+        this.moves = locks.values().copied().collect();
+        this
     }
     fn get(&self, state: Piece) -> &Option<MoveNode> {
         &self.field[state.x as usize][state.y as usize][state.r as usize][state.tspin as usize]
