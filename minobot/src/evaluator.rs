@@ -40,43 +40,43 @@ pub struct StandardEvaluator {
 impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
-            holes: -100.0,
+            holes: -200.0,
             holes_sq: -7.0,
-            hole_depths: -20.0,
+            hole_depths: -25.0,
             hole_depths_sq: -2.0,
             filled_cells_x: 0.0,
             filled_cells_x_sq: 10.0,
             filled_cells_down: 0.0,
             filled_cells_down_sq: 10.0,
-            move_height: -10.0,
+            move_height: -20.0,
             move_height_sq: -0.5,
-            max_height: -1.0,
-            max_height_sq: -0.5,
-            wells: -1.0,
+            max_height: -50.0,
+            max_height_sq: 0.0,
+            wells: 0.0,
             wells_sq: 0.0,
             well_depth: -0.0,
-            well_depth_sq: -5.0,
+            well_depth_sq: 0.0,
             spikes: 0.0,
             spikes_sq: 0.0,
             bumpiness: -20.0,
             bumpiness_sq: -5.0,
-            row_transitions: -10.0,
+            row_transitions: -15.0,
             row_transitions_sq: -0.3,
             line_clear: [
                 0.0,
-                -75.0,
-                -30.0,
-                -15.0,
-                500.
+                -200.0,
+                -175.0,
+                -150.0,
+                500.0
             ],
             tspin_clear: [
                 0.0,
                 100.0,
-                500.0,
-                1000.0
+                750.0,
+                1000.0,
             ],
             wasted_t: -500.0,
-            tslot: 150.0,
+            tslot: 300.0
         }
     }
 }
