@@ -17,13 +17,15 @@ pub struct BotData<E> {
 
 #[derive(Serialize, Deserialize)]
 pub struct BotSettings {
-    pub use_hold: bool
+    pub use_hold: bool,
+    pub exploration_exploitation_constant: f64
 }
 
 impl Default for BotSettings {
     fn default() -> Self {
         BotSettings {
-            use_hold: true
+            use_hold: true,
+            exploration_exploitation_constant: std::f64::consts::SQRT_2
         }
     }
 }
@@ -125,11 +127,12 @@ impl Node {
         let mut score = std::f64::NEG_INFINITY;
         for (i, c) in self.children.iter().enumerate() {
             if !c.finished {
-                use std::f64::consts::SQRT_2;
                 // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
                 //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
-                let child_score = (i as f64) / (self.children.len() as f64) +
-                    SQRT_2 * ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
+                let child_score =
+                    (i as f64) / (self.children.len() as f64) +
+                    data.settings.exploration_exploitation_constant * 
+                    ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
                 if child_score > score {
                     child_index = Some(i);
                     score = child_score;
