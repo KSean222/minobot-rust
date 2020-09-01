@@ -218,7 +218,7 @@ impl Node {
             uses_hold,
             finished: child_depth as usize >= data.queue.len()
         };
-        let (value, reward) = data.evaluator.evaluate(&child, self, &data.queue);
+        let (value, reward) = data.evaluator.evaluate(&child, &data.queue);
         child.value = value;
         child.reward = reward;
         self.children.push(child);

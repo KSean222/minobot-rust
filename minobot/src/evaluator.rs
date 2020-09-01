@@ -4,7 +4,7 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, parent: &Node, queue: &[PieceType]) -> (f64, f64);
+    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (f64, f64);
 }
 
 #[derive(Serialize, Deserialize)]
@@ -13,20 +13,10 @@ pub struct StandardEvaluator {
     holes_sq: f64,
     hole_depths: f64,
     hole_depths_sq: f64,
-    filled_cells_x: f64,
-    filled_cells_x_sq: f64,
-    filled_cells_down: f64,
-    filled_cells_down_sq: f64,
     move_height: f64,
     move_height_sq: f64,
     max_height: f64,
     max_height_sq: f64,
-    wells: f64,
-    wells_sq: f64,
-    well_depth: f64,
-    well_depth_sq: f64,
-    spikes: f64,
-    spikes_sq: f64,
     bumpiness: f64,
     bumpiness_sq: f64,
     row_transitions: f64,
@@ -44,20 +34,10 @@ impl Default for  StandardEvaluator {
             holes_sq: -7.0,
             hole_depths: -25.0,
             hole_depths_sq: -2.0,
-            filled_cells_x: 0.0,
-            filled_cells_x_sq: 10.0,
-            filled_cells_down: 0.0,
-            filled_cells_down_sq: 10.0,
             move_height: -20.0,
             move_height_sq: -0.5,
             max_height: -50.0,
             max_height_sq: 0.0,
-            wells: 0.0,
-            wells_sq: 0.0,
-            well_depth: -0.0,
-            well_depth_sq: 0.0,
-            spikes: 0.0,
-            spikes_sq: 0.0,
             bumpiness: -20.0,
             bumpiness_sq: -5.0,
             row_transitions: -15.0,
@@ -82,7 +62,7 @@ impl Default for  StandardEvaluator {
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, parent: &Node, queue: &[PieceType]) -> (f64, f64) {
+    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (f64, f64) {
         let mut value = 0.0;
         let mut reward = 0.0;
 
@@ -95,12 +75,8 @@ impl Evaluator for StandardEvaluator {
         let mut hole_depths = 0;
         let mut hole_depths_sq = 0;
         let mut max_height = 0;
-        let mut wells = 0;
-        let mut spikes = 0;
         let mut tslots = 0;
         for x in 0..10 {
-            let mut well_streak = 0;
-            let mut spike_streak = 0;
             for y in 20..40 {
                 let height = 39 - y;
                 if !node.board.occupied(x, y) {
@@ -109,12 +85,6 @@ impl Evaluator for StandardEvaluator {
                         holes += 1;
                         hole_depths += depth;
                         hole_depths_sq += depth * depth;
-                    }
-                    if node.board.occupied(x - 1, y) && node.board.occupied(x + 1, y) {
-                        well_streak += 1;
-                        if well_streak == 2 {
-                            wells += 1;
-                        }
                     }
                     if  !node.board.occupied(x - 1, y) &&
                         !node.board.occupied(x + 1, y) &&
@@ -131,17 +101,8 @@ impl Evaluator for StandardEvaluator {
                         heights[x as usize] = height;
                         max_height = max_height.max(height);
                     }
-                    if !node.board.occupied(x - 1, y) && !node.board.occupied(x + 1, y) {
-                        spike_streak += 1;
-                        if spike_streak == 2 {
-                            spikes += 1;
-                        }
-                    }
                 }
             }
-            let well_streak = well_streak as f64;
-            value += well_streak * self.well_depth;
-            value += well_streak * well_streak * self.well_depth_sq;
         }
         value += holes as f64 * self.holes;
         value += (holes * holes) as f64 * self.holes_sq;
@@ -149,10 +110,6 @@ impl Evaluator for StandardEvaluator {
         value += hole_depths_sq as f64 * self.hole_depths_sq;
         value += max_height as f64 * self.max_height;
         value += (max_height * max_height) as f64 * self.max_height_sq;
-        value += wells as f64 * self.wells;
-        value += (wells * wells) as f64 * self.wells_sq;
-        value += (spikes as f64) * self.spikes;
-        value += (spikes * spikes) as f64 * self.spikes_sq;
 
         let mut bumpiness = 0.0;
         let mut bumpiness_sq = 0.0;
@@ -184,24 +141,6 @@ impl Evaluator for StandardEvaluator {
         }
         value += row_transitions as f64 * self.row_transitions;
         value += (row_transitions * row_transitions) as f64 * self.row_transitions_sq;
-
-        let mut filled_cells_x = 0;
-        let mut filled_cells_down = 0;
-        for &(x, y) in &node.mv.cells() {
-            if parent.board.occupied(x + 1, y) {
-                filled_cells_x += 1;
-            }
-            if parent.board.occupied(x - 1, y) {
-                filled_cells_x += 1;
-            }
-            if parent.board.occupied(x, y + 1) {
-                filled_cells_down += 1;
-            }
-        }
-        value += filled_cells_x as f64 * self.filled_cells_x;
-        value += (filled_cells_x * filled_cells_x) as f64 * self.filled_cells_x_sq;
-        value += filled_cells_down as f64 * self.filled_cells_down;
-        value += (filled_cells_down * filled_cells_down) as f64 * self.filled_cells_down_sq;
 
         let move_height = 39 - node.mv.y;
         value += move_height as f64 * self.move_height;
