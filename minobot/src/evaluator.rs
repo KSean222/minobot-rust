@@ -4,67 +4,67 @@ use crate::bot::Node;
 use minotetris::*;
 
 pub trait Evaluator: Send {
-    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (f64, f64);
+    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (i32, i32);
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct StandardEvaluator {
-    holes: f64,
-    holes_sq: f64,
-    hole_depths: f64,
-    hole_depths_sq: f64,
-    move_height: f64,
-    move_height_sq: f64,
-    max_height: f64,
-    max_height_sq: f64,
-    bumpiness: f64,
-    bumpiness_sq: f64,
-    row_transitions: f64,
-    row_transitions_sq: f64,
-    line_clear: [f64; 5],
-    tspin_clear: [f64; 4],
-    wasted_t: f64,
-    tslot: f64
+    holes: i32,
+    holes_sq: i32,
+    hole_depths: i32,
+    hole_depths_sq: i32,
+    move_height: i32,
+    move_height_sq: i32,
+    max_height: i32,
+    max_height_sq: i32,
+    bumpiness: i32,
+    bumpiness_sq: i32,
+    row_transitions: i32,
+    row_transitions_sq: i32,
+    line_clear: [i32; 5],
+    tspin_clear: [i32; 4],
+    wasted_t: i32,
+    tslot: i32
 }
 
 impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
-            holes: -200.0,
-            holes_sq: -7.0,
-            hole_depths: -25.0,
-            hole_depths_sq: -2.0,
-            move_height: -20.0,
-            move_height_sq: 0.0,
-            max_height: -10.0,
-            max_height_sq: 0.0,
-            bumpiness: -20.0,
-            bumpiness_sq: -5.0,
-            row_transitions: -15.0,
-            row_transitions_sq: 0.0,
+            holes: -200,
+            holes_sq: -7,
+            hole_depths: -25,
+            hole_depths_sq: -2,
+            move_height: -20,
+            move_height_sq: 0,
+            max_height: -10,
+            max_height_sq: 0,
+            bumpiness: -20,
+            bumpiness_sq: -5,
+            row_transitions: -15,
+            row_transitions_sq: 0,
             line_clear: [
-                0.0,
-                -200.0,
-                -175.0,
-                -150.0,
-                500.0
+                0,
+                -200,
+                -175,
+                -150,
+                500
             ],
             tspin_clear: [
-                0.0,
-                100.0,
-                750.0,
-                1000.0,
+                0,
+                100,
+                750,
+                1000,
             ],
-            wasted_t: -500.0,
-            tslot: 300.0
+            wasted_t: -500,
+            tslot: 300
         }
     }
 }
 
 impl Evaluator for StandardEvaluator {
-    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (f64, f64) {
-        let mut value = 0.0;
-        let mut reward = 0.0;
+    fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (i32, i32) {
+        let mut value = 0;
+        let mut reward = 0;
 
         // if node.lock.block_out {
         //     return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
@@ -97,17 +97,17 @@ impl Evaluator for StandardEvaluator {
             }
         }
         let max_height = node.board.column_heights.iter().copied().max().unwrap();
-        value += holes as f64 * self.holes;
-        value += (holes * holes) as f64 * self.holes_sq;
-        value += hole_depths as f64 * self.hole_depths;
-        value += hole_depths_sq as f64 * self.hole_depths_sq;
-        value += max_height as f64 * self.max_height;
-        value += (max_height * max_height) as f64 * self.max_height_sq;
+        value += holes * self.holes;
+        value += holes * holes * self.holes_sq;
+        value += hole_depths * self.hole_depths;
+        value += hole_depths_sq * self.hole_depths_sq;
+        value += max_height * self.max_height;
+        value += max_height * max_height * self.max_height_sq;
 
-        let mut bumpiness = 0.0;
-        let mut bumpiness_sq = 0.0;
+        let mut bumpiness = 0;
+        let mut bumpiness_sq = 0;
         for (&h1, &h2) in node.board.column_heights.iter().zip(node.board.column_heights.iter().skip(1)) {
-            let diff = (h1 - h2).abs() as f64;
+            let diff = (h1 - h2).abs();
             bumpiness += diff;
             bumpiness_sq += diff * diff;
         }
@@ -118,11 +118,11 @@ impl Evaluator for StandardEvaluator {
             .iter()
             .skip(node.depth as usize)
             .filter(|&&t| t == PieceType::T)
-            .count() as u32;
+            .count() as i32;
         if node.board.hold == Some(PieceType::T) {
             t_pieces += 1;
         }
-        value += t_pieces.min(tslots).max(1) as f64 * self.tslot;
+        value += t_pieces.min(tslots).max(1) * self.tslot;
 
         let mut row_transitions = 0;
         for y in 20..40 {
@@ -132,12 +132,12 @@ impl Evaluator for StandardEvaluator {
                 }
             }
         }
-        value += row_transitions as f64 * self.row_transitions;
-        value += (row_transitions * row_transitions) as f64 * self.row_transitions_sq;
+        value += row_transitions * self.row_transitions;
+        value += row_transitions * row_transitions * self.row_transitions_sq;
 
         let move_height = 39 - node.mv.y;
-        value += move_height as f64 * self.move_height;
-        value += (move_height * move_height) as f64 * self.move_height_sq;
+        value += move_height * self.move_height;
+        value += move_height * move_height * self.move_height_sq;
 
         if node.mv.kind == PieceType::T && (node.mv.tspin == TspinType::None || node.lock.lines_cleared == 0) {
             reward += self.wasted_t;

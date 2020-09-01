@@ -18,14 +18,14 @@ pub struct BotData<E> {
 #[derive(Serialize, Deserialize)]
 pub struct BotSettings {
     pub use_hold: bool,
-    pub exploration_exploitation_constant: f64
+    pub exploration_exploitation_constant: f32
 }
 
 impl Default for BotSettings {
     fn default() -> Self {
         BotSettings {
             use_hold: true,
-            exploration_exploitation_constant: std::f64::consts::SQRT_2
+            exploration_exploitation_constant: std::f32::consts::SQRT_2
         }
     }
 }
@@ -90,9 +90,9 @@ pub struct Node {
     pub uses_hold: bool,
 
     pub children: Vec<Node>,
-    pub value: f64,
-    pub reward: f64,
-    pub max_child_reward: f64,
+    pub value: i32,
+    pub reward: i32,
+    pub max_child_reward: i32,
     pub visits: u32,
     pub finished: bool,
     pub depth: u32
@@ -113,26 +113,24 @@ impl Node {
             lock: LockResult {
                 lines_cleared: 0
             },
-            value: std::f64::NEG_INFINITY,
-            reward: 0.0,
-            max_child_reward: 0.0,
+            value: std::i32::MIN,
+            reward: 0,
+            max_child_reward: 0,
             visits: 1,
             uses_hold: false,
             finished: false,
             depth: 0
         }
     }
-    fn update<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
+    fn update<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((i32, i32), u32) {
         let mut child_index = None;
-        let mut score = std::f64::NEG_INFINITY;
+        let mut score = std::f32::NEG_INFINITY;
         for (i, c) in self.children.iter().enumerate() {
             if !c.finished {
-                // let child_score = c.score / (c.sims as f64) + 1.0 * SQRT_2
-                //     * ((node.sims as f64).ln() / (c.sims as f64)).sqrt();
                 let child_score =
-                    (i as f64) / (self.children.len() as f64) +
+                    (i as f32) / (self.children.len() as f32) +
                     data.settings.exploration_exploitation_constant * 
-                    ((self.visits as f64).ln() / (c.visits as f64)).sqrt();
+                    ((self.visits as f32).ln() / (c.visits as f32)).sqrt();
                 if child_score > score {
                     child_index = Some(i);
                     score = child_score;
@@ -160,10 +158,10 @@ impl Node {
             self.expand(data)
         } else {
             self.finished = true;
-            ((std::f64::NEG_INFINITY, 0.0), 0)
+            ((std::i32::MIN, 0), 0)
         }
     }
-    fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((f64, f64), u32) {
+    fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((i32, i32), u32) {
         let piece = Piece::spawn(&self.board, data.queue[self.depth as usize]);
         for mv in Moves::moves(&self.board, piece).moves {
             self.create_child(data, mv, false);
@@ -182,7 +180,7 @@ impl Node {
         }
         if self.children.is_empty() {
             self.finished = true;
-            ((std::f64::NEG_INFINITY, 0.0), 0)
+            ((std::i32::MIN, 0), 0)
         } else {
             self.children.sort_unstable_by(|a, b| {
                 (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
@@ -211,9 +209,9 @@ impl Node {
             lock,
             children: Vec::new(),
             depth: child_depth,
-            value: 0.0,
-            reward: 0.0,
-            max_child_reward: 0.0,
+            value: 0,
+            reward: 0,
+            max_child_reward: 0,
             visits: 1,
             uses_hold,
             finished: child_depth as usize >= data.queue.len()
