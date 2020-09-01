@@ -285,6 +285,10 @@ impl MainState {
 
 pub fn main() -> ggez::GameResult { 
     let context_builder = ggez::ContextBuilder::new("Minobot GUI", "KSean222")
+        .window_setup(ggez::conf::WindowSetup {
+            title: "MinoBot GUI".to_owned(),
+            ..Default::default()
+        })    
         .window_mode(ggez::conf::WindowMode {
             resizable: true,
             ..Default::default()
