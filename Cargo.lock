@@ -1866,6 +1866,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "stats"
+version = "0.1.0"
+dependencies = [
+ "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumset 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "minobot 0.1.0",
+ "minotetris 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "stb_truetype"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

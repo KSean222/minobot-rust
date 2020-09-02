@@ -3,5 +3,9 @@
 members = [
     "gui",
     "minotetris",
-    "minobot"
+    "minobot",
+    "stats"
 ]
+
+[profile.release]
+debug = true
