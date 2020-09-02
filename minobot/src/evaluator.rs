@@ -22,6 +22,7 @@ pub struct StandardEvaluator {
     row_transitions: i32,
     row_transitions_sq: i32,
     line_clear: [i32; 5],
+    mini_clear: [i32; 3],
     tspin_clear: [i32; 4],
     wasted_t: i32,
     tslot: i32
@@ -48,6 +49,11 @@ impl Default for  StandardEvaluator {
                 -175,
                 -150,
                 500
+            ],
+            mini_clear: [
+                0,
+                50,
+                100
             ],
             tspin_clear: [
                 0,
@@ -144,24 +150,8 @@ impl Evaluator for StandardEvaluator {
         }
         reward += match node.mv.tspin {
             TspinType::None => &self.line_clear[..],
-            TspinType::Mini | TspinType::Full => {
-                // for board in &[&parent.board, &node.board] {
-                //     for y in 20..40 {
-                //         for x in 0..10 {
-                //             print!("{}", if board.get_cell(x, y) == CellType::Empty {
-                //                 ".."
-                //             } else {
-                //                 "[]"
-                //             });
-                //         }
-                //         println!();
-                //     }
-                //     println!("Hold: {:?}", board.hold);
-                // }
-                // println!("Detected as {:?} {}", node.lock.tspin, node.lock.lines_cleared);
-                // panic!();
-                &self.tspin_clear[..]
-            }
+            TspinType::Mini => &self.mini_clear[..],
+            TspinType::Full => &self.tspin_clear[..],
         }[node.lock.lines_cleared as usize];
 
         (value, reward)
