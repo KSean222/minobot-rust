@@ -69,12 +69,12 @@ impl Default for  StandardEvaluator {
 
 impl Evaluator for StandardEvaluator {
     fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (i32, i32) {
+        if node.lock.block_out {
+            return (std::i32::MIN, std::i32::MIN);
+        }
+        
         let mut value = 0;
         let mut reward = 0;
-
-        // if node.lock.block_out {
-        //     return (std::f64::NEG_INFINITY, std::f64::NEG_INFINITY);
-        // }
 
         let mut holes = 0;
         let mut hole_depths = 0;

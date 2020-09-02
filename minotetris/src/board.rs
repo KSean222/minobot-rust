@@ -3,7 +3,8 @@ use arrayvec::ArrayVec;
 
 #[derive(Copy, Clone, Debug)]
 pub struct LockResult {
-    pub lines_cleared: i32
+    pub lines_cleared: i32,
+    pub block_out: bool
 }
 
 pub trait Row: Copy + Default {
@@ -95,9 +96,13 @@ impl<R: Row> Board<R> {
         x < 0 || x >= 10 || y < 0 || y >= 40 || self.rows[y as usize].get(x as usize)
     }
     pub fn lock_piece(&mut self, piece: Piece) -> LockResult {
+        let mut block_out = true;
         for &(x, y) in &piece.cells() {
             self.rows[y as usize].set(x as usize, piece.kind.cell());
             self.column_heights[x as usize] = self.column_heights[x as usize].max(40 - y);
+            if y >= 20 {
+                block_out = false;
+            }
         }
         
         let lines_cleared = self.rows.iter().filter(|row| row.filled()).count() as i32;
@@ -117,6 +122,7 @@ impl<R: Row> Board<R> {
         
         LockResult {
             lines_cleared,
+            block_out
         }
     }
     pub fn piece_fits(&self, piece: Piece) -> bool {

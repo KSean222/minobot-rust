@@ -111,7 +111,8 @@ impl Node {
                 tspin: TspinType::None
             },
             lock: LockResult {
-                lines_cleared: 0
+                lines_cleared: 0,
+                block_out: false
             },
             value: std::i32::MIN,
             reward: 0,
