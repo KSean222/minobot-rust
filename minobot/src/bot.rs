@@ -123,7 +123,7 @@ impl Node {
             depth: 0
         }
     }
-    fn update<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((i32, i32), u32) {
+    fn update<E: Evaluator>(&mut self, data: &BotData<E>) -> ((i32, i32), u32) {
         let mut child_index = None;
         let mut score = std::f32::NEG_INFINITY;
         for (i, c) in self.children.iter().enumerate() {
@@ -162,7 +162,7 @@ impl Node {
             ((std::i32::MIN, 0), 0)
         }
     }
-    fn expand<E: Evaluator>(&mut self, data: &mut BotData<E>) -> ((i32, i32), u32) {
+    fn expand<E: Evaluator>(&mut self, data: &BotData<E>) -> ((i32, i32), u32) {
         let piece = Piece::spawn(&self.board, data.queue[self.depth as usize]);
         for mv in Moves::moves(&self.board, piece).moves {
             self.create_child(data, mv, false);
@@ -194,7 +194,7 @@ impl Node {
             ((best.value, self.reward + best.reward), visits)
         }
     }
-    fn create_child<E: Evaluator>(&mut self, data: &mut BotData<E>, mv: Piece, uses_hold: bool) {
+    fn create_child<E: Evaluator>(&mut self, data: &BotData<E>, mv: Piece, uses_hold: bool) {
         let mut board = self.board.clone();
         let mut child_depth = self.depth;
         if uses_hold {
