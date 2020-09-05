@@ -11,10 +11,9 @@ use minotetris::*;
 use minobot::pathfinder::PathfinderMove;
 use minobot::evaluator::StandardEvaluator;
 use minobot::bot::BotSettings;
+use minobot::BotHandle;
 use serde::{Serialize, Deserialize};
 
-mod bot_handle;
-use bot_handle::BotHandle;
 
 struct MainState {
     board: Board<ColoredRow>,

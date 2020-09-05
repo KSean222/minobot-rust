@@ -3,9 +3,9 @@ use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
 use minotetris::*;
-use minobot::bot::{Bot, BotSettings};
-use minobot::evaluator::Evaluator;
-use minobot::pathfinder::{Moves, PathfinderMove};
+use crate::bot::{Bot, BotSettings};
+use crate::evaluator::Evaluator;
+use crate::pathfinder::{Moves, PathfinderMove};
 
 enum BotCommand {
     NewPiece(PieceType),
