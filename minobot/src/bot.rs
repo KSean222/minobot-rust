@@ -163,6 +163,10 @@ impl Node {
         }
     }
     fn expand<E: Evaluator>(&mut self, data: &BotData<E>) -> ((i32, i32), u32) {
+        if self.depth >= data.queue.len() {
+            self.finished = true;
+            return ((std::i32::MIN, 0), 0);
+        }
         let piece = Piece::spawn(&self.board, data.queue[self.depth as usize]);
         for mv in Moves::moves(&self.board, piece).moves {
             self.create_child(data, mv, false);
