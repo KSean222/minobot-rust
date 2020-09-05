@@ -137,6 +137,17 @@ impl<R: Row> Board<R> {
     pub fn rows(&self) -> &[R] {
         &self.rows
     }
+    pub fn set_field(&mut self, rows: impl Into<ArrayVec<[R; 40]>>) {
+        self.rows = rows.into();
+        for x in 0..10 {
+            for y in 0..40 {
+                if self.occupied(x, y) {
+                    self.column_heights[x as usize] = 40 - y;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 impl Board<ColoredRow> {
