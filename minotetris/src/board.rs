@@ -79,8 +79,8 @@ impl Default for ColoredRow {
 
 #[derive(Debug, Clone)]
 pub struct Board<R=u16> {
-    pub rows: ArrayVec<[R; 40]>,
-    pub column_heights: [i32; 10],
+    rows: ArrayVec<[R; 40]>,
+    column_heights: [i32; 10],
     pub hold: Option<PieceType>
 }
 
@@ -130,6 +130,12 @@ impl<R: Row> Board<R> {
             .cells()
             .iter()
             .all(|&(x, y)| !self.occupied(x, y))
+    }
+    pub fn column_heights(&self) -> &[i32] {
+        &self.column_heights
+    }
+    pub fn rows(&self) -> &[R] {
+        &self.rows
     }
 }
 

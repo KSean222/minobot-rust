@@ -81,7 +81,7 @@ impl Evaluator for StandardEvaluator {
         let mut hole_depths_sq = 0;
         let mut tslots = 0;
         for x in 0..10 {
-            let column_height = node.board.column_heights[x as usize] as i32;
+            let column_height = node.board.column_heights()[x as usize] as i32;
             for y in (40 - column_height as i32)..40 {
                 let height = 40 - y;
                 if !node.board.occupied(x, y) {
@@ -102,7 +102,7 @@ impl Evaluator for StandardEvaluator {
                 }
             }
         }
-        let max_height = node.board.column_heights.iter().copied().max().unwrap();
+        let max_height = node.board.column_heights().iter().copied().max().unwrap();
         value += holes * self.holes;
         value += holes * holes * self.holes_sq;
         value += hole_depths * self.hole_depths;
@@ -112,7 +112,11 @@ impl Evaluator for StandardEvaluator {
 
         let mut bumpiness = 0;
         let mut bumpiness_sq = 0;
-        for (&h1, &h2) in node.board.column_heights.iter().zip(node.board.column_heights.iter().skip(1)) {
+        let bumpiness_iter = node.board
+            .column_heights()
+            .iter()
+            .zip(node.board.column_heights().iter().skip(1));
+        for (&h1, &h2) in bumpiness_iter {
             let diff = (h1 - h2).abs();
             bumpiness += diff;
             bumpiness_sq += diff * diff;

@@ -187,7 +187,7 @@ impl event::EventHandler for MainState {
 
         for y in 20..40 {
             for x in 0..10 {
-                let cell = self.board.rows[y as usize].cell_type(x as usize);
+                let cell = self.board.rows()[y as usize].cell_type(x as usize);
                 self.draw_cell(ctx, &mut mesh, cell, false, HOLD_WIDTH + HOLD_PADDING + x, y - 20)?;
             }
         }
