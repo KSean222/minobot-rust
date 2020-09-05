@@ -6,9 +6,6 @@ use minobot::evaluator::StandardEvaluator;
 use minobot::bot::{Bot, BotSettings};
 use serde::{Serialize, Deserialize};
 
-mod queue;
-use queue::PieceQueue;
-
 #[derive(Serialize, Deserialize)]
 struct Options {
     evaluator: StandardEvaluator,

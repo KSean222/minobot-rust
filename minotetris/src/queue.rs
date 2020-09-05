@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use minotetris::*;
+use crate::*;
 use enumset::EnumSet;
 use arrayvec::ArrayVec;
 use rand::prelude::*;

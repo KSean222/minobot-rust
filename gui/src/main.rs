@@ -15,8 +15,6 @@ use serde::{Serialize, Deserialize};
 
 mod bot_handle;
 use bot_handle::BotHandle;
-mod queue;
-use queue::PieceQueue;
 
 struct MainState {
     board: Board<ColoredRow>,
