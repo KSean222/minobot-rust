@@ -9,6 +9,7 @@ use crate::pathfinder::{Moves, PathfinderMove};
 
 enum BotCommand {
     NewPiece(PieceType),
+    Reset(Board),
     BeginThinking,
     NextMove,
 }
@@ -55,6 +56,7 @@ impl BotHandle {
                         thinking = true;
                     }
                     BotCommand::NewPiece(piece) => bot.update_queue(piece),
+                    BotCommand::Reset(board) => bot.reset(board, bot.data.queue.clone()),
                     BotCommand::NextMove => {
                         thinking = false;
                         let board = bot.root.board.clone();
@@ -82,6 +84,10 @@ impl BotHandle {
 
     pub fn add_piece(&self, piece: PieceType) {
         self.tx.send(BotCommand::NewPiece(piece)).unwrap();
+    }
+
+    pub fn reset(&self, board: Board) {
+        self.tx.send(BotCommand::Reset(board)).unwrap();
     }
 
     pub fn begin_thinking(&self) {
