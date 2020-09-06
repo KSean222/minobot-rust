@@ -7,25 +7,25 @@ pub trait Evaluator: Send {
     fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (i32, i32);
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StandardEvaluator {
-    holes: i32,
-    holes_sq: i32,
-    hole_depths: i32,
-    hole_depths_sq: i32,
-    move_height: i32,
-    move_height_sq: i32,
-    max_height: i32,
-    max_height_sq: i32,
-    bumpiness: i32,
-    bumpiness_sq: i32,
-    row_transitions: i32,
-    row_transitions_sq: i32,
-    line_clear: [i32; 5],
-    mini_clear: [i32; 3],
-    tspin_clear: [i32; 4],
-    wasted_t: i32,
-    tslot: i32
+    pub holes: i32,
+    pub holes_sq: i32,
+    pub hole_depths: i32,
+    pub hole_depths_sq: i32,
+    pub move_height: i32,
+    pub move_height_sq: i32,
+    pub max_height: i32,
+    pub max_height_sq: i32,
+    pub bumpiness: i32,
+    pub bumpiness_sq: i32,
+    pub row_transitions: i32,
+    pub row_transitions_sq: i32,
+    pub line_clear: [i32; 5],
+    pub mini_clear: [i32; 3],
+    pub tspin_clear: [i32; 4],
+    pub wasted_t: i32,
+    pub tslot: i32
 }
 
 impl Default for  StandardEvaluator {
