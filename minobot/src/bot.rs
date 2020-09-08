@@ -56,7 +56,7 @@ impl<E: Evaluator> Bot<E> {
         self.data.queue.remove(0);
         let root = self.root.children
             .drain(..)
-            .max_by_key(|c| c.value.saturating_add(c.reward).saturating_add(c.max_child_reward));
+            .max_by_key(|c| c.total_value());
         if let Some(root) = root {
             self.root = root;
             self.root.advance();
@@ -95,6 +95,9 @@ pub struct Node {
 }
 
 impl Node {
+    fn total_value(&self) -> i32 {
+        self.value.saturating_add(self.reward).saturating_add(self.max_child_reward)
+    }
     fn root(board: Board) -> Self {
         Self {
             board,
@@ -139,10 +142,7 @@ impl Node {
             let child = self.children.remove(child_index);
             let child_index = self.children
                 .iter()
-                .position(|c| {
-                    c.value.saturating_add(c.reward).saturating_add(c.max_child_reward) >
-                    child.value.saturating_add(child.reward).saturating_add(child.max_child_reward)
-                })
+                .position(|c| c.total_value() > child.total_value())
                 .unwrap_or(self.children.len());
             self.children.insert(child_index, child);
             if value.saturating_add(reward) > self.value.saturating_add(self.max_child_reward) {
@@ -183,7 +183,7 @@ impl Node {
             self.finished = true;
             ((std::i32::MIN, 0), 0)
         } else {
-            self.children.sort_unstable_by_key(|c| c.value.saturating_add(c.reward));
+            self.children.sort_unstable_by_key(|c| c.total_value());
             let best = self.children.last().unwrap();
             let visits = self.children.len() as u32;
             self.value = best.value;
