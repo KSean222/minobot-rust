@@ -56,11 +56,7 @@ impl<E: Evaluator> Bot<E> {
         self.data.queue.remove(0);
         let root = self.root.children
             .drain(..)
-            .max_by(|a, b| {
-                (a.value + a.reward + a.max_child_reward)
-                    .partial_cmp(&(b.value + b.reward + b.max_child_reward))
-                    .unwrap()
-            });
+            .max_by_key(|c| c.value.saturating_add(c.reward).saturating_add(c.max_child_reward));
         if let Some(root) = root {
             self.root = root;
             self.root.advance();
@@ -144,17 +140,17 @@ impl Node {
             let child_index = self.children
                 .iter()
                 .position(|c| {
-                    c.value + c.reward + c.max_child_reward >
-                    child.value + child.reward + child.max_child_reward
+                    c.value.saturating_add(c.reward).saturating_add(c.max_child_reward) >
+                    child.value.saturating_add(child.reward).saturating_add(child.max_child_reward)
                 })
                 .unwrap_or(self.children.len());
             self.children.insert(child_index, child);
-            if value + reward > self.value + self.max_child_reward {
+            if value.saturating_add(reward) > self.value.saturating_add(self.max_child_reward) {
                 self.value = value;
                 self.max_child_reward = reward;
             }
             self.visits += visits;
-            ((value, self.reward + reward), visits)
+            ((value, self.reward.saturating_add(reward)), visits)
         } else if self.children.is_empty() {
             self.expand(data)
         } else {
@@ -187,15 +183,13 @@ impl Node {
             self.finished = true;
             ((std::i32::MIN, 0), 0)
         } else {
-            self.children.sort_unstable_by(|a, b| {
-                (a.value + a.reward).partial_cmp(&(b.value + b.reward)).unwrap()
-            });
+            self.children.sort_unstable_by_key(|c| c.value.saturating_add(c.reward));
             let best = self.children.last().unwrap();
             let visits = self.children.len() as u32;
             self.value = best.value;
             self.max_child_reward = best.reward;
             self.visits += visits;
-            ((best.value, self.reward + best.reward), visits)
+            ((best.value, self.reward.saturating_add(best.reward)), visits)
         }
     }
     fn create_child<E: Evaluator>(&mut self, data: &BotData<E>, mv: Piece, uses_hold: bool) {
