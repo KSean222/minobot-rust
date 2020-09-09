@@ -80,7 +80,7 @@ impl Piece {
     pub fn spawn(board: &Board<impl Row>, kind: PieceType) -> Self {
         let mut piece = Self {
             kind,
-            x: 3,
+            x: 4,
             y: 19,
             r: 0,
             tspin: TspinType::None
