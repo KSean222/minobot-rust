@@ -26,7 +26,7 @@ const O_MOVES: &[PathfinderMove] = &[
 
 pub struct Moves {
     field: [[[[Option<MoveNode>; 3]; 4]; 40]; 10],
-    pub moves: Vec<Piece>
+    pub moves: Vec<(Piece, i32)>
 }
 
 impl Moves {
@@ -102,7 +102,10 @@ impl Moves {
                 }
             }
         }
-        this.moves = locks.values().copied().collect();
+        this.moves = locks
+            .values()
+            .map(|&mv| (mv, this.get(mv).unwrap().true_dist()))
+            .collect();
         this
     }
     fn get(&self, state: Piece) -> &Option<MoveNode> {

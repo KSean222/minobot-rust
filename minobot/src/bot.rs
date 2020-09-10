@@ -82,6 +82,7 @@ impl<E: Evaluator> Bot<E> {
 pub struct Node {
     pub board: Board,
     pub mv: Piece,
+    pub move_dist: i32,
     pub lock: LockResult,
     pub uses_hold: bool,
 
@@ -109,6 +110,7 @@ impl Node {
                 r: 0,
                 tspin: TspinType::None
             },
+            move_dist: 0,
             lock: LockResult {
                 lines_cleared: 0,
                 block_out: false
@@ -192,7 +194,7 @@ impl Node {
             ((best.value, self.reward.saturating_add(best.reward)), visits)
         }
     }
-    fn create_child<E: Evaluator>(&mut self, data: &BotData<E>, mv: Piece, uses_hold: bool) {
+    fn create_child<E: Evaluator>(&mut self, data: &BotData<E>, (mv, move_dist): (Piece, i32), uses_hold: bool) {
         let mut board = self.board.clone();
         let mut child_depth = self.depth;
         if uses_hold {
@@ -205,6 +207,7 @@ impl Node {
         let mut child = Node {
             board,
             mv,
+            move_dist,
             lock,
             children: Vec::new(),
             depth: child_depth,

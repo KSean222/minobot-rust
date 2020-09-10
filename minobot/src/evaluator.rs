@@ -15,6 +15,7 @@ pub struct StandardEvaluator {
     pub hole_depths_sq: i32,
     pub move_height: i32,
     pub move_height_sq: i32,
+    pub move_dist: i32,
     pub max_height: i32,
     pub max_height_sq: i32,
     pub bumpiness: i32,
@@ -37,6 +38,7 @@ impl Default for  StandardEvaluator {
             hole_depths_sq: -2,
             move_height: -20,
             move_height_sq: 0,
+            move_dist: -1,
             max_height: -10,
             max_height_sq: 0,
             bumpiness: -20,
@@ -157,6 +159,7 @@ impl Evaluator for StandardEvaluator {
             TspinType::Mini => &self.mini_clear[..],
             TspinType::Full => &self.tspin_clear[..],
         }[node.lock.lines_cleared as usize];
+        reward += node.move_dist * self.move_dist;
 
         (value, reward)
     }
