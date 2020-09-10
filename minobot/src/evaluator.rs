@@ -45,23 +45,23 @@ impl Default for  StandardEvaluator {
             row_transitions_sq: 0,
             line_clear: [
                 0,
-                -200,
-                -175,
-                -150,
+                -300,
+                -290,
+                -280,
                 500
             ],
             mini_clear: [
                 0,
-                50,
+                -200,
                 100
             ],
             tspin_clear: [
                 0,
                 100,
-                750,
+                500,
                 1000,
             ],
-            wasted_t: -500,
+            wasted_t: -250,
             tslot: 300
         }
     }
