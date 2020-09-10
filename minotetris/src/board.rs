@@ -4,7 +4,9 @@ use arrayvec::ArrayVec;
 #[derive(Copy, Clone, Debug)]
 pub struct LockResult {
     pub lines_cleared: i32,
-    pub block_out: bool
+    pub block_out: bool,
+    pub combo: u32,
+    pub b2b_bonus: bool
 }
 
 pub trait Row: Copy + Default {
@@ -81,7 +83,9 @@ impl Default for ColoredRow {
 pub struct Board<R=u16> {
     rows: ArrayVec<[R; 40]>,
     column_heights: [i32; 10],
-    pub hold: Option<PieceType>
+    pub hold: Option<PieceType>,
+    combo: u32,
+    b2b: bool
 }
 
 impl<R: Row> Board<R> {
@@ -89,7 +93,9 @@ impl<R: Row> Board<R> {
         Self {
             rows: [R::default(); 40].into(),
             column_heights: [0; 10],
-            hold: None
+            hold: None,
+            combo: 0,
+            b2b: false
         }
     }
     pub fn occupied(&self, x: i32, y: i32) -> bool {
@@ -120,9 +126,21 @@ impl<R: Row> Board<R> {
             }
         }
         
+        let mut b2b_bonus = false;
+        if lines_cleared > 0 {
+            self.combo += 1;
+            let b2b = self.b2b;
+            self.b2b = lines_cleared == 4 || piece.tspin != TspinType::None;
+            b2b_bonus = b2b && self.b2b;
+        } else {
+            self.combo = 0;
+        }
+
         LockResult {
             lines_cleared,
-            block_out
+            block_out,
+            combo: self.combo,
+            b2b_bonus
         }
     }
     pub fn piece_fits(&self, piece: Piece) -> bool {
@@ -155,7 +173,9 @@ impl Board<ColoredRow> {
         Board {
             rows: self.rows.iter().map(|row| row.compress()).collect(),
             column_heights: self.column_heights.clone(),
-            hold: self.hold
+            hold: self.hold,
+            combo: self.combo,
+            b2b: self.b2b
         }
     }
 }

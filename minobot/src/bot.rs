@@ -113,7 +113,9 @@ impl Node {
             move_dist: 0,
             lock: LockResult {
                 lines_cleared: 0,
-                block_out: false
+                block_out: false,
+                combo: 0,
+                b2b_bonus: false
             },
             value: std::i32::MIN,
             reward: 0,

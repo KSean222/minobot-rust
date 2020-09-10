@@ -25,10 +25,13 @@ pub struct StandardEvaluator {
     pub line_clear: [i32; 5],
     pub mini_clear: [i32; 3],
     pub tspin_clear: [i32; 4],
+    pub combo_garbage: i32,
     pub wasted_t: i32,
     pub tslot: i32
 }
 
+
+const COMBO_TABLE: [i32; 13] = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
 impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
@@ -63,6 +66,7 @@ impl Default for  StandardEvaluator {
                 500,
                 1000,
             ],
+            combo_garbage: 100,
             wasted_t: -250,
             tslot: 300
         }
@@ -159,6 +163,7 @@ impl Evaluator for StandardEvaluator {
             TspinType::Mini => &self.mini_clear[..],
             TspinType::Full => &self.tspin_clear[..],
         }[node.lock.lines_cleared as usize];
+        reward += COMBO_TABLE[(node.lock.combo as usize).min(COMBO_TABLE.len() - 1)] * self.combo_garbage;
         reward += node.move_dist * self.move_dist;
 
         (value, reward)
