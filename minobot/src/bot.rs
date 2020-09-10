@@ -15,7 +15,7 @@ pub struct BotData<E> {
     evaluator: E,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BotSettings {
     pub use_hold: bool,
     pub exploration_exploitation_constant: f32
