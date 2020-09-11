@@ -22,6 +22,8 @@ pub struct StandardEvaluator {
     pub bumpiness_sq: i32,
     pub row_transitions: i32,
     pub row_transitions_sq: i32,
+    pub well_depth: i32,
+    pub max_well_depth: i32,
     pub line_clear: [i32; 5],
     pub mini_clear: [i32; 3],
     pub tspin_clear: [i32; 4],
@@ -48,6 +50,8 @@ impl Default for  StandardEvaluator {
             bumpiness_sq: -5,
             row_transitions: -15,
             row_transitions_sq: 0,
+            well_depth: 50,
+            max_well_depth: 6,
             line_clear: [
                 0,
                 -300,
@@ -108,11 +112,12 @@ impl Evaluator for StandardEvaluator {
                 }
             }
         }
-        let max_height = node.board.column_heights().iter().copied().max().unwrap();
         value += holes * self.holes;
         value += holes * holes * self.holes_sq;
         value += hole_depths * self.hole_depths;
         value += hole_depths_sq * self.hole_depths_sq;
+
+        let max_height = node.board.column_heights().iter().copied().max().unwrap();
         value += max_height * self.max_height;
         value += max_height * max_height * self.max_height_sq;
 
@@ -151,6 +156,29 @@ impl Evaluator for StandardEvaluator {
         value += row_transitions * self.row_transitions;
         value += row_transitions * row_transitions * self.row_transitions_sq;
 
+        let (well_column, min_height) = node.board
+            .column_heights()
+            .iter()
+            .copied()
+            .enumerate()
+            .min_by_key(|&(_, h)| h)
+            .unwrap();
+        let mut well_row = u16::default();
+        for x in 0..10 {
+            if x != well_column {
+                well_row.set(x, CellType::Garbage);
+            }
+        }
+        let well_depth = node.board
+            .rows()
+            .iter()
+            .rev()
+            .skip(min_height as usize)
+            .take_while(|&&r| r == well_row)
+            .count()
+            as i32;
+        value += well_depth.min(self.max_well_depth) * self.well_depth;
+        
         let move_height = 39 - node.mv.y;
         value += move_height * self.move_height;
         value += move_height * move_height * self.move_height_sq;
