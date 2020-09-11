@@ -66,7 +66,7 @@ impl Default for  StandardEvaluator {
                 500,
                 1000,
             ],
-            combo_garbage: 100,
+            combo_garbage: 300,
             wasted_t: -250,
             tslot: 300
         }
