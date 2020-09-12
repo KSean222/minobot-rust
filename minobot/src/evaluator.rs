@@ -27,6 +27,7 @@ pub struct StandardEvaluator {
     pub line_clear: [i32; 5],
     pub mini_clear: [i32; 3],
     pub tspin_clear: [i32; 4],
+    pub perfect_clear: i32,
     pub combo_garbage: i32,
     pub wasted_t: i32,
     pub tslot: i32
@@ -70,6 +71,7 @@ impl Default for  StandardEvaluator {
                 500,
                 1000,
             ],
+            perfect_clear: 5000,
             combo_garbage: 300,
             wasted_t: -250,
             tslot: 300
@@ -193,6 +195,9 @@ impl Evaluator for StandardEvaluator {
         }[node.lock.lines_cleared as usize];
         reward += COMBO_TABLE[(node.lock.combo as usize).min(COMBO_TABLE.len() - 1)] * self.combo_garbage;
         reward += node.move_dist * self.move_dist;
+        if node.board.column_heights().iter().all(|&h| h == 0) {
+            reward += self.perfect_clear;
+        }
 
         (value, reward)
     }
