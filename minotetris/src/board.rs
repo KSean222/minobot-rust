@@ -84,8 +84,8 @@ pub struct Board<R=u16> {
     rows: ArrayVec<[R; 40]>,
     column_heights: [i32; 10],
     pub hold: Option<PieceType>,
-    combo: u32,
-    b2b: bool
+    pub combo: u32,
+    pub b2b: bool
 }
 
 impl<R: Row> Board<R> {
