@@ -185,35 +185,40 @@ impl event::EventHandler for MainState {
         graphics::clear(ctx, graphics::BLACK);
         let mut mesh = graphics::MeshBuilder::new();
 
-        for y in 20..40 {
+        for y in 0..20 {
             for x in 0..10 {
                 let cell = self.board.rows()[y as usize].cell_type(x as usize);
-                self.draw_cell(ctx, &mut mesh, cell, false, HOLD_WIDTH + HOLD_PADDING + x, y - 20)?;
+                self.draw_cell(ctx, &mut mesh, cell, false, HOLD_WIDTH + HOLD_PADDING + x, y)?;
             }
         }
         let mut piece = self.piece;
         piece.x += HOLD_WIDTH + HOLD_PADDING;
-        piece.y -= 20;
         self.draw_piece(ctx, &mut mesh, piece, false)?;
         
         let mut ghost = self.piece;
         while ghost.soft_drop(&self.board) {}
         ghost.x += HOLD_WIDTH + HOLD_PADDING;
-        ghost.y -= 20;
         self.draw_piece(ctx, &mut mesh, ghost, true)?;
 
         if let Some(piece) = self.board.hold {
             let piece = Piece {
                 kind: piece,
                 x: 1,
-                y: 2,
+                y: 17,
                 r: 0,
                 tspin: TspinType::None
             };
             self.draw_piece(ctx, &mut mesh, piece, false)?;
         }
 
-        for (i, piece) in self.queue.get_queue().clone().into_iter().enumerate() {
+        let queue = self.queue
+            .get_queue()
+            .clone()
+            .into_iter()
+            .rev()
+            .enumerate()
+            .rev();
+        for (i, piece) in queue {
             let piece = Piece {
                 kind: piece,
                 x: HOLD_WIDTH + HOLD_PADDING + BOARD_WIDTH + QUEUE_PADDING + 1,
@@ -246,7 +251,7 @@ impl MainState {
         let start_y = (height - cell_size * HEIGHT as f32) / 2.0;
         let bounds = graphics::Rect::new(
             start_x + x as f32 * cell_size,
-            start_y + y as f32 * cell_size,
+            start_y + (19 - y) as f32 * cell_size,
             cell_size,
             cell_size
         );

@@ -68,7 +68,7 @@ impl Moves {
                 };
                 if success {
                     let dist = if mv == PathfinderMove::SonicDrop {
-                        child.y - parent.y
+                        parent.y - child.y
                     } else {
                         1
                     };

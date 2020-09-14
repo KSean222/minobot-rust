@@ -105,23 +105,20 @@ impl<R: Row> Board<R> {
         let mut block_out = true;
         for &(x, y) in &piece.cells() {
             self.rows[y as usize].set(x as usize, piece.kind.cell());
-            self.column_heights[x as usize] = self.column_heights[x as usize].max(40 - y);
-            if y >= 20 {
+            self.column_heights[x as usize] = self.column_heights[x as usize].max(y);
+            if y < 20 {
                 block_out = false;
             }
         }
         
-        let lines_cleared = self.rows.iter().filter(|row| row.filled()).count() as i32;
-        let new = (0..lines_cleared)
-            .map(|_| R::default())
-            .chain(self.rows.iter().copied().filter(|row| !row.filled()))
-            .collect();
-        self.rows = new;
+        self.rows.retain(|r| !r.filled());
+        let lines_cleared = 40 - self.rows.len() as i32;
+        self.rows.extend((0..lines_cleared).map(|_| R::default()));
 
         for x in 0..10 {
             self.column_heights[x] -= lines_cleared;
             while self.column_heights[x] > 0 &&
-                !self.occupied(x as i32, 40 - self.column_heights[x] as i32) {
+                !self.occupied(x as i32, self.column_heights[x] as i32) {
                 self.column_heights[x] -= 1;
             }
         }
@@ -158,9 +155,9 @@ impl<R: Row> Board<R> {
     pub fn set_field(&mut self, rows: impl Into<ArrayVec<[R; 40]>>) {
         self.rows = rows.into();
         for x in 0..10 {
-            for y in 0..40 {
+            for y in (0..40).rev() {
                 if self.occupied(x, y) {
-                    self.column_heights[x as usize] = 40 - y;
+                    self.column_heights[x as usize] = y;
                     break;
                 }
             }

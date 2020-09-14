@@ -60,7 +60,7 @@ impl<E: Evaluator> Bot<E> {
         if let Some(root) = root {
             self.root = root;
             self.root.advance();
-            // for &row in self.root.board.rows.iter().skip(20) {
+            // for &row in self.root.board.rows().iter().rev().skip(20) {
             //     for x in 0..10 {
             //         print!("{}", if row.get(x) {
             //             "[]"
@@ -71,6 +71,7 @@ impl<E: Evaluator> Bot<E> {
             //     println!()
             // }
             // println!("Hold: {:?}, Queue: {:?}", self.root.board.hold, self.data.queue);
+            // println!();
             Some(&self.root)
         } else {
             None

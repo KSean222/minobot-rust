@@ -94,21 +94,20 @@ impl Evaluator for StandardEvaluator {
         let mut tslots = 0;
         for x in 0..10 {
             let column_height = node.board.column_heights()[x as usize] as i32;
-            for y in (40 - column_height as i32)..40 {
-                let height = 40 - y;
+            for y in 0..column_height {
                 if !node.board.occupied(x, y) {
-                    let depth = column_height - height;
+                    let depth = column_height - y;
                     holes += 1;
                     hole_depths += depth;
                     hole_depths_sq += depth * depth;
                     if  !node.board.occupied(x - 1, y) &&
                         !node.board.occupied(x + 1, y) &&
-                        !node.board.occupied(x, y + 1) &&
                         !node.board.occupied(x, y - 1) &&
-                        node.board.occupied(x - 1, y + 1) &&
-                        node.board.occupied(x + 1, y + 1) &&
-                        (node.board.occupied(x - 1, y - 1) ||
-                        node.board.occupied(x + 1, y - 1)) {
+                        !node.board.occupied(x, y + 1) &&
+                        node.board.occupied(x - 1, y - 1) &&
+                        node.board.occupied(x + 1, y - 1) &&
+                        (node.board.occupied(x - 1, y + 1) ||
+                        node.board.occupied(x + 1, y + 1)) {
                         tslots += 1;
                     }
                 }
@@ -148,7 +147,7 @@ impl Evaluator for StandardEvaluator {
         value += t_pieces.min(tslots).max(1) * self.tslot;
 
         let mut row_transitions = 0;
-        for y in 20..40 {
+        for y in 0..20 {
             for x in 0..11 {
                 if node.board.occupied(x - 1, y) != node.board.occupied(x, y) {
                     row_transitions += 1;
@@ -174,16 +173,14 @@ impl Evaluator for StandardEvaluator {
         let well_depth = node.board
             .rows()
             .iter()
-            .rev()
             .skip(min_height as usize)
             .take_while(|&&r| r == well_row)
             .count()
             as i32;
         value += well_depth.min(self.max_well_depth) * self.well_depth;
         
-        let move_height = 39 - node.mv.y;
-        value += move_height * self.move_height;
-        value += move_height * move_height * self.move_height_sq;
+        value += node.mv.y * self.move_height;
+        value += node.mv.y * node.mv.y * self.move_height_sq;
 
         if node.mv.kind == PieceType::T && (node.mv.tspin == TspinType::None || node.lock.lines_cleared == 0) {
             reward += self.wasted_t;
