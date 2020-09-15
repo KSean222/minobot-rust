@@ -222,7 +222,7 @@ impl event::EventHandler for MainState {
             let piece = Piece {
                 kind: piece,
                 x: HOLD_WIDTH + HOLD_PADDING + BOARD_WIDTH + QUEUE_PADDING + 1,
-                y: 2 + i as i32 * 4,
+                y: i as i32 * 4 + 1,
                 r: 0,
                 tspin: TspinType::None
             };
