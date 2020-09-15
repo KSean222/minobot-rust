@@ -105,7 +105,7 @@ impl<R: Row> Board<R> {
         let mut block_out = true;
         for &(x, y) in &piece.cells() {
             self.rows[y as usize].set(x as usize, piece.kind.cell());
-            self.column_heights[x as usize] = self.column_heights[x as usize].max(y);
+            self.column_heights[x as usize] = self.column_heights[x as usize].max(y + 1);
             if y < 20 {
                 block_out = false;
             }
@@ -118,7 +118,7 @@ impl<R: Row> Board<R> {
         for x in 0..10 {
             self.column_heights[x] -= lines_cleared;
             while self.column_heights[x] > 0 &&
-                !self.occupied(x as i32, self.column_heights[x] as i32) {
+                !self.occupied(x as i32, self.column_heights[x] as i32 - 1) {
                 self.column_heights[x] -= 1;
             }
         }
