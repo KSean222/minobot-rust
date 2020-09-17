@@ -96,7 +96,7 @@ impl Evaluator for StandardEvaluator {
             let column_height = node.board.column_heights()[x as usize] as i32;
             for y in 0..column_height {
                 if !node.board.occupied(x, y) {
-                    let depth = column_height - y;
+                    let depth = column_height - y - 1;
                     holes += 1;
                     hole_depths += depth;
                     hole_depths_sq += depth * depth;
