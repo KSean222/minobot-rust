@@ -8,7 +8,7 @@ pub trait Evaluator: Send {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StandardEvaluator {
+pub struct StandardEvaluator<L=()> {
     pub holes: i32,
     pub holes_sq: i32,
     pub hole_depths: i32,
@@ -30,7 +30,8 @@ pub struct StandardEvaluator {
     pub perfect_clear: i32,
     pub combo_garbage: i32,
     pub wasted_t: i32,
-    pub tslot: i32
+    pub tslot: i32,
+    _log: L
 }
 
 
@@ -74,12 +75,13 @@ impl Default for  StandardEvaluator {
             perfect_clear: 5000,
             combo_garbage: 300,
             wasted_t: -250,
-            tslot: 300
+            tslot: 300,
+            _log: ()
         }
     }
 }
 
-impl Evaluator for StandardEvaluator {
+impl<L: Send + 'static> Evaluator for StandardEvaluator<L> {
     fn evaluate(&self, node: &Node, queue: &[PieceType]) -> (i32, i32) {
         if node.lock.block_out {
             return (std::i32::MIN, std::i32::MIN);
@@ -199,6 +201,20 @@ impl Evaluator for StandardEvaluator {
             reward += self.perfect_clear;
         }
 
+        if std::any::TypeId::of::<L>() != std::any::TypeId::of::<()>() {
+            println!("holes: {}", holes);
+            println!("hole_depths: {}", hole_depths);
+            println!("hole_depths_sq: {}", hole_depths_sq);
+            println!("max_height: {}", max_height);
+            println!("bumpiness: {}", bumpiness);
+            println!("bumpiness_sq: {}", bumpiness_sq);
+            println!("t_pieces: {}", t_pieces);
+            println!("tslots: {}", tslots);
+            println!("row_transitions: {}", row_transitions);
+            println!("well_depth: {}", well_depth);
+            println!("move_height: {}", move_height);
+        }
+        
         (value, reward)
     }
 }
