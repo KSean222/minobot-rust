@@ -36,7 +36,7 @@ pub struct StandardEvaluator<L=()> {
 
 
 const COMBO_TABLE: [i32; 13] = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
-impl Default for  StandardEvaluator {
+impl<L: Default> Default for StandardEvaluator<L> {
     fn default() -> Self {
         StandardEvaluator {
             holes: -200,
@@ -76,7 +76,7 @@ impl Default for  StandardEvaluator {
             combo_garbage: 300,
             wasted_t: -250,
             tslot: 300,
-            _log: ()
+            _log: L::default()
         }
     }
 }
