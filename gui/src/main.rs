@@ -155,15 +155,15 @@ impl event::EventHandler for MainState {
                 if instant.elapsed() > self.move_time {
                     if let Some(mv) = path.pop_front() {
                         match mv {
-                            PathfinderMove::Left => { self.piece.move_left(&self.board); },
-                            PathfinderMove::Right => { self.piece.move_right(&self.board); },
-                            PathfinderMove::RotLeft => { self.piece.turn_left(&self.board); },
-                            PathfinderMove::RotRight => { self.piece.turn_right(&self.board); },
-                            PathfinderMove::SonicDrop => while self.piece.soft_drop(&self.board) {},
-                        }
+                            PathfinderMove::Left => self.piece.move_left(&self.board),
+                            PathfinderMove::Right => self.piece.move_right(&self.board),
+                            PathfinderMove::RotLeft => self.piece.turn_left(&self.board),
+                            PathfinderMove::RotRight => self.piece.turn_right(&self.board),
+                            PathfinderMove::SonicDrop => self.piece.sonic_drop(&self.board)
+                        };
                         *instant = Instant::now();
                     } else {
-                        while self.piece.soft_drop(&self.board) {}
+                        self.piece.sonic_drop(&self.board);
                         self.board.lock_piece(self.piece);
                         self.piece = Piece::spawn(&self.board, self.queue.next(&mut rand::thread_rng()));
                         self.bot.add_piece(*self.queue.get_queue().back().unwrap());
@@ -196,7 +196,7 @@ impl event::EventHandler for MainState {
         self.draw_piece(ctx, &mut mesh, piece, false)?;
         
         let mut ghost = self.piece;
-        while ghost.soft_drop(&self.board) {}
+        ghost.sonic_drop(&self.board);
         ghost.x += HOLD_WIDTH + HOLD_PADDING;
         self.draw_piece(ctx, &mut mesh, ghost, true)?;
 

@@ -105,6 +105,24 @@ impl Piece {
     pub fn soft_drop(&mut self, board: &Board<impl Row>) -> bool {
         self.try_move(board, self.x, self.y - 1, self.r)
     }
+    pub fn sonic_drop(&mut self, board: &Board<impl Row>) -> bool {
+        let heights = board.column_heights();
+        let dist = self.cells()
+            .iter()
+            .map(|&(x, y)| y - heights[x as usize])
+            .min()
+            .unwrap();
+        if dist < 0 {
+            let mut success = false;
+            while self.soft_drop(board) {
+                success = true;
+            }
+            success
+        } else {
+            self.y -= dist;
+            dist > 0
+        }
+    }
     pub fn turn_left(&mut self, board: &Board<impl Row>) -> bool {
         self.rotate(board,if self.r > 0 { self.r - 1 } else { 3 })
     }

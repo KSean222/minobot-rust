@@ -58,13 +58,7 @@ impl Moves {
                     PathfinderMove::Right => child.move_right(board),
                     PathfinderMove::RotLeft => child.turn_left(board),
                     PathfinderMove::RotRight => child.turn_right(board),
-                    PathfinderMove::SonicDrop => {
-                        let mut success = false;
-                        while child.soft_drop(board) {
-                            success = true;
-                        }
-                        success
-                    }
+                    PathfinderMove::SonicDrop => child.sonic_drop(board)
                 };
                 if success {
                     let dist = if mv == PathfinderMove::SonicDrop {
