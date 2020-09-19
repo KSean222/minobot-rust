@@ -155,8 +155,8 @@ impl<R: Row> Board<R> {
     pub fn set_field(&mut self, rows: impl Into<ArrayVec<[R; 40]>>) {
         self.rows = rows.into();
         for x in 0..10 {
-            for y in (0..40).rev() {
-                if self.occupied(x, y) {
+            for y in (0..41).rev() {
+                if self.occupied(x, y - 1) {
                     self.column_heights[x as usize] = y;
                     break;
                 }
