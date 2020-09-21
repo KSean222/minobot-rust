@@ -152,6 +152,30 @@ impl<R: Row> Board<R> {
     pub fn rows(&self) -> &[R] {
         &self.rows
     }
+    pub fn add_garbage(&mut self, holes: &[i32]) -> bool {
+        for &hole in holes {
+            for (x, height) in self.column_heights.iter_mut().enumerate() {
+                if !(*height == 0 && x as i32 == hole) {
+                    *height += 1;
+                }
+            }
+        }
+        let garbage_rows = holes
+            .iter()
+            .map(|&hole| {
+                let mut row = R::default();
+                for x in 0..10 {
+                    if x != hole {
+                        row.set(x as usize, CellType::Garbage);
+                    }
+                }
+                row
+            });
+        let rows = self.rows.len();
+        let block_out = self.rows.iter().skip(rows - holes.len()).any(|r| r.filled());
+        self.rows = garbage_rows.chain(self.rows.iter().take(rows - holes.len()).copied()).collect();
+        block_out
+    }
     pub fn set_field(&mut self, rows: impl Into<ArrayVec<[R; 40]>>) {
         self.rows = rows.into();
         for x in 0..10 {
