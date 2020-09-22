@@ -80,11 +80,11 @@ impl Moves {
                     }
                 }
                 if mv == PathfinderMove::SonicDrop {
-                    let mut key = [(0, 0); 4];
-                    for (dest, &src) in key.iter_mut().zip(child.cells().iter()) {
+                    let mut cells = [(0, 0); 4];
+                    for (dest, &src) in cells.iter_mut().zip(child.cells().iter()) {
                         *dest = src;
                     }
-                    locks.entry(key)
+                    locks.entry((cells, child.tspin))
                         .and_modify(|prev| {
                             let prev_dist = this.get(*prev).unwrap().true_dist();
                             let new_dist = this.get(child).unwrap().true_dist();

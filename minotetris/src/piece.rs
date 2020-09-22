@@ -60,7 +60,7 @@ impl PieceType {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TspinType {
     None,
     Mini,
