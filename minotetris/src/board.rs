@@ -173,7 +173,7 @@ impl<R: Row> Board<R> {
             });
         let rows = self.rows.len();
         let block_out = self.rows.iter().skip(rows - holes.len()).any(|r| r.filled());
-        self.rows = garbage_rows.chain(self.rows.iter().take(rows - holes.len()).copied()).collect();
+        self.rows = garbage_rows.rev().chain(self.rows.iter().take(rows - holes.len()).copied()).collect();
         block_out
     }
     pub fn set_field(&mut self, rows: impl Into<ArrayVec<[R; 40]>>) {
