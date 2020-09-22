@@ -38,43 +38,43 @@ const COMBO_TABLE: [i32; 13] = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
 impl Default for  StandardEvaluator {
     fn default() -> Self {
         StandardEvaluator {
-            holes: -200,
-            holes_sq: -7,
-            hole_depths: -25,
-            hole_depths_sq: -2,
-            move_height: -20,
-            move_height_sq: 0,
-            move_dist: -1,
-            max_height: -10,
+            holes: -203,
+            holes_sq: -8,
+            hole_depths: -18,
+            hole_depths_sq: -1,
+            move_height: -18,
+            move_height_sq: -4,
+            move_dist: -5,
+            max_height: -8,
             max_height_sq: 0,
-            bumpiness: -20,
-            bumpiness_sq: -5,
-            row_transitions: -15,
+            bumpiness: -15,
+            bumpiness_sq: -9,
+            row_transitions: -20,
             row_transitions_sq: 0,
-            well_depth: 50,
-            max_well_depth: 6,
+            well_depth: 55,
+            max_well_depth: 10,
             line_clear: [
-                0,
-                -300,
-                -290,
+                7,
+                -363,
+                -293,
                 -280,
-                500
+                554
             ],
             mini_clear: [
-                0,
-                -200,
-                100
+                1,
+                -194,
+                101
             ],
             tspin_clear: [
-                0,
-                100,
-                500,
-                1000,
+                -6,
+                108,
+                629,
+                1244
             ],
             perfect_clear: 5000,
-            combo_garbage: 300,
-            wasted_t: -250,
-            tslot: 300
+            combo_garbage: 305,
+            wasted_t: -268,
+            tslot: 301
         }
     }
 }
