@@ -4,7 +4,8 @@ members = [
     "gui",
     "minotetris",
     "minobot",
-    "stats"
+    "stats",
+    "battle"
 ]
 
 [profile.release]

@@ -1,5 +1,5 @@
 [package]
-name = "minobot"
+name = "battle"
 version = "0.1.0"
 authors = ["KSean222 <44050761+KSean222@users.noreply.github.com>"]
 edition = "2018"
@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 minotetris = { path = "../minotetris" }
+minobot = { path = "../minobot" }
+rand = "0.7.0"
 enumset = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-bincode = "1.2.1"
-serde_json = "1.0"
