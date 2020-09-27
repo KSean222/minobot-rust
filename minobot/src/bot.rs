@@ -52,13 +52,20 @@ impl<E: Evaluator> Bot<E> {
         self.root.finished
     }
     pub fn next_move(&mut self) -> Option<&Node> {
-        self.data.queue.remove(0);
         let root = self.root.children
             .drain(..)
             .max_by_key(|c| c.total_value());
         if let Some(root) = root {
+            let pieces_used = if root.uses_hold && self.root.board.hold.is_none() {
+                2
+            } else {
+                1
+            };
+            for _ in 0..pieces_used {
+                self.data.queue.remove(0);
+            }
             self.root = root;
-            self.root.advance();
+            self.root.advance(pieces_used);
             // for &row in self.root.board.rows().iter().rev().skip(20) {
             //     for x in 0..10 {
             //         print!("{}", if row.get(x) {
@@ -225,11 +232,11 @@ impl Node {
         child.reward = reward;
         self.children.push(child);
     }
-    fn advance(&mut self){
+    fn advance(&mut self, pieces_used: u32){
         self.finished = false;
-        self.depth -= 1;
+        self.depth -= pieces_used;
         for c in self.children.iter_mut() {
-            c.advance();
+            c.advance(pieces_used);
         }
     }
 }
