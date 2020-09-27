@@ -44,9 +44,8 @@ impl<E: Evaluator> Bot<E> {
     pub fn update_queue(&mut self, mino: PieceType) {
         self.data.queue.push(mino);
     }
-    pub fn reset(&mut self, board: Board, queue: Vec<PieceType>) {
+    pub fn reset(&mut self, board: Board) {
         self.root = Node::root(board);
-        self.data.queue = queue;
     }
     pub fn think(&mut self) -> bool {
         self.root.update(&mut self.data);
