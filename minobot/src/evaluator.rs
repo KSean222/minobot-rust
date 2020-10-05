@@ -93,7 +93,7 @@ impl Evaluator for StandardEvaluator {
         let mut hole_depths_sq = 0;
         let mut tslots = 0;
         for x in 0..10 {
-            let column_height = node.board.column_heights()[x as usize] as i32;
+            let column_height = node.board.column_heights()[x as usize];
             for y in 0..column_height {
                 if !node.board.occupied(x, y) {
                     let depth = column_height - y - 1;
