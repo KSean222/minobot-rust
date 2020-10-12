@@ -134,28 +134,32 @@ impl Node {
         }
     }
     fn update<E: Evaluator>(&mut self, data: &BotData<E>) -> ((i32, i32), u32) {
-        let mut child_index = None;
+        let mut child = None;
         let mut score = std::f32::NEG_INFINITY;
-        for (i, c) in self.children.iter().enumerate() {
-            if !c.finished {
-                let child_score =
-                    (i as f32) / (self.children.len() as f32) +
-                    data.settings.exploration_exploitation_constant * 
-                    ((self.visits as f32).ln() / (c.visits as f32)).sqrt();
-                if child_score > score {
-                    child_index = Some(i);
-                    score = child_score;
+        if !self.children.is_empty() {
+            let min_value = self.children
+                .iter()
+                .filter(|c| !c.lock.block_out)
+                .map(|c| c.total_value())
+                .min()
+                .unwrap();
+            let upper = self.value.saturating_add(self.max_child_reward) - min_value;
+            for c in &mut self.children {
+                if !c.finished && !c.lock.block_out {
+                    let v = c.total_value() - min_value;
+                    let child_score =
+                        v as f32 / upper as f32 +
+                        data.settings.exploration_exploitation_constant * 
+                        ((self.visits as f32).ln() / (c.visits as f32)).sqrt();
+                    if child_score > score {
+                        child = Some(c);
+                        score = child_score;
+                    }
                 }
             }
         }
-        if let Some(child_index) = child_index {
-            let ((value, reward), visits) = self.children[child_index].update(data);
-            let child = self.children.remove(child_index);
-            let child_index = self.children
-                .iter()
-                .position(|c| c.total_value() > child.total_value())
-                .unwrap_or(self.children.len());
-            self.children.insert(child_index, child);
+        if let Some(child) = child {
+            let ((value, reward), visits) = child.update(data);
             if value.saturating_add(reward) > self.value.saturating_add(self.max_child_reward) {
                 self.value = value;
                 self.max_child_reward = reward;
@@ -194,8 +198,7 @@ impl Node {
             self.finished = true;
             ((std::i32::MIN, 0), 0)
         } else {
-            self.children.sort_unstable_by_key(|c| c.total_value());
-            let best = self.children.last().unwrap();
+            let best = self.children.iter().max_by_key(|c| c.total_value()).unwrap();
             let visits = self.children.len() as u32;
             self.value = best.value;
             self.max_child_reward = best.reward;
